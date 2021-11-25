@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io::{BufWriter, Write},
 };
@@ -11,7 +12,7 @@ use super::{
 
 #[derive(Default)]
 pub struct Store {
-    collection: Vec<Message>,
+    collection: HashMap<String, Vec<Message>>,
     storage_path: String,
     flush_count: usize,
     current_not_flushed: usize,
@@ -19,14 +20,21 @@ pub struct Store {
 
 impl Store {
     pub fn build(path: String) -> Self {
-        let contents = fs::read_to_string(&path).unwrap_or_else(|_| "[]".to_string());
-        let messages: Vec<Message> = serde_json::from_str(&contents).unwrap();
+        let contents = fs::read_to_string(&path).unwrap_or_else(|_| "{}".to_string());
+        let messages: HashMap<String, Vec<Message>> = serde_json::from_str(&contents).unwrap();
 
         Self {
             collection: messages,
             storage_path: path,
             flush_count: 100,
             current_not_flushed: 0,
+        }
+    }
+
+    pub fn stream_version(&self, stream: String) -> u64 {
+        match self.collection.get(&stream) {
+            Some(it) => it.len() as u64,
+            _ => 0,
         }
     }
 
@@ -38,20 +46,24 @@ impl Store {
     ) -> Result<bool, AddEventError> {
         let message_count = self
             .collection
-            .iter()
-            .filter(|message| message.stream.eq_ignore_ascii_case(&stream))
-            .count();
+            .entry(stream.clone())
+            .or_insert_with(Vec::new)
+            .len();
 
         if expected_version < message_count as u64 {
             return Err(AddEventError);
         }
 
         let message = Message {
-            stream,
+            stream: stream.clone(),
             position: expected_version + 1,
             data: event.data.clone(),
         };
-        self.collection.push(message);
+
+        self.collection
+            .entry(stream)
+            .or_insert_with(Vec::new)
+            .push(message);
         self.current_not_flushed += 1;
 
         if self.current_not_flushed > self.flush_count {
@@ -66,18 +78,40 @@ impl Store {
     }
 
     pub fn get_events(&self, stream: String) -> Result<EventStream, GetEventsError> {
-        let events: Vec<Event> = self
-            .collection
+        let message_stream = match self.collection.get(&stream) {
+            Some(it) => it,
+            _ => return Ok(EventStream::default()),
+        };
+
+        let events: Vec<Event> = message_stream
             .iter()
-            .filter_map(|message| {
-                if message.stream.eq_ignore_ascii_case(&stream) {
-                    Some(Event {
-                        version: message.position,
-                        data: message.data.clone(),
-                    })
-                } else {
-                    None
-                }
+            .map(|message| Event {
+                version: message.position,
+                data: message.data.clone(),
+            })
+            .collect();
+
+        let version = events.len() as u64;
+
+        Ok(EventStream { events, version })
+    }
+
+    pub fn get_events_after(
+        &self,
+        stream: String,
+        version: u64,
+    ) -> Result<EventStream, GetEventsError> {
+        let message_stream = match self.collection.get(&stream) {
+            Some(it) => it,
+            _ => return Ok(EventStream::default()),
+        };
+
+        let events: Vec<Event> = message_stream
+            .iter()
+            .filter(|message| message.position > version)
+            .map(|message| Event {
+                version: message.position,
+                data: message.data.clone(),
             })
             .collect();
 
