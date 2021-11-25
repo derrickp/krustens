@@ -1,8 +1,7 @@
 use crate::{
     events::{event::Event, event_data::EventData, listen_added::ListenAdded},
-    projections::listen_tracker::build_tracker,
+    projections::{has_listen::HasListen, listen_tracker::ListenTracker},
     spotify::listen::Listen,
-    stores::{error::Error, store::Store},
 };
 
 pub struct AddSpotifyListen {
@@ -10,23 +9,17 @@ pub struct AddSpotifyListen {
 }
 
 impl AddSpotifyListen {
-    pub fn handle(&self, store: &Store) -> Result<Option<Event>, Error> {
-        let event_stream = match store.get_events("listens".to_string()) {
-            Ok(it) => it,
-            Err(e) => return Err(Error::GetEventsError(e)),
-        };
-
-        let tracker = build_tracker(event_stream.events);
+    pub fn handle(&self, tracker: &ListenTracker) -> Option<Event> {
         if tracker.has_listen(
             &self.listen.artist_name,
             &self.listen.track_name,
             &self.listen.end_time,
         ) {
-            return Ok(None);
+            return None;
         }
 
         let event = Event {
-            version: event_stream.version,
+            version: tracker.version + 1,
             data: EventData::ListenAdded(ListenAdded {
                 artist_name: self.listen.artist_name.clone(),
                 track_name: self.listen.track_name.clone(),
@@ -34,6 +27,6 @@ impl AddSpotifyListen {
                 ms_played: self.listen.ms_played,
             }),
         };
-        Ok(Some(event))
+        Some(event)
     }
 }
