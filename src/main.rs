@@ -6,18 +6,44 @@ mod projections;
 mod spotify;
 mod stores;
 
-use std::{env, fs};
+use std::{
+    env,
+    fs::{self, create_dir},
+    path::Path,
+};
 
 use spotify::track_play::TrackPlay;
 
 use crate::{
     commands::add_spotify_listen::AddSpotifyListen,
-    persistence::{json_reader::JsonReader, file_writer::FileWriter, writer::Writer},
+    persistence::{file_writer::FileWriter, json_reader::JsonReader, writer::Writer},
     projections::{repository::Repository, stats::Stats},
     stores::store::Store,
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
+
+struct AppFiles {
+    folder: &'static str,
+}
+
+impl AppFiles {
+    fn streams_file(&self) -> String {
+        format!("{}/streams.json", self.folder)
+    }
+
+    fn snapshot_file(&self) -> String {
+        format!("{}/snapshot.json", self.folder)
+    }
+
+    fn streams_writer(&self) -> FileWriter {
+        FileWriter::from(self.streams_file())
+    }
+
+    fn snapshot_writer(&self) -> FileWriter {
+        FileWriter::from(self.snapshot_file())
+    }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,31 +53,37 @@ fn main() {
         _ => "".to_string(),
     };
 
+    let app_files = AppFiles {
+        folder: "./app_data",
+    };
+
+    if !Path::new(app_files.folder).exists() {
+        create_dir(app_files.folder).unwrap();
+    }
+
     let history_folder = "./derrick_garbage/spotify_play_history";
-    let app_data_folder = "./derrick_garbage/app_data";
     let stats_folder = "./derrick_garbage/output/stats";
 
-    let contents = fs::read_to_string(format!("{}/streams.json", app_data_folder))
-        .unwrap_or_else(|_| "{}".to_string());
-    let file_reader = JsonReader {
-        contents: &contents,
+    let existing_stream = match fs::read_to_string(app_files.streams_file()) {
+        Ok(it) => it,
+        _ => "".to_string(),
     };
-    let mut store = Store::build(&file_reader);
+    let stream_reader = JsonReader {
+        contents: &existing_stream,
+    };
+    let mut store = Store::build(&stream_reader);
 
     match run_command.as_str() {
         "process_listens" => {
-            let snapshot_writer = FileWriter::from(format!("{}/snapshot.json", app_data_folder));
-            let message_writer = FileWriter::from(format!("{}/streams.json", app_data_folder));
-
-            let snapshot_contents =
-                fs::read_to_string(format!("{}/snapshot.json", app_data_folder))
-                    .unwrap_or_else(|_| "{}".to_string());
+            let snapshot_contents = match fs::read_to_string(app_files.snapshot_file()) {
+                Ok(it) => it,
+                _ => "".to_string(),
+            };
             let snapshot_reader = JsonReader {
                 contents: &snapshot_contents,
             };
             let mut repository = Repository::build(1500, &snapshot_reader);
-            let streaming_files =
-                fs::read_dir(history_folder).expect("Could not read history path");
+            let streaming_files = fs::read_dir(history_folder).unwrap();
 
             for entry in streaming_files.into_iter() {
                 let path = entry.unwrap().path().clone();
@@ -68,7 +100,7 @@ fn main() {
                         listen: listen.clone(),
                         min_listen_length: MIN_LISTEN_LENGTH,
                     };
-                    let tracker = repository.get_tracker(&store, &snapshot_writer);
+                    let tracker = repository.get_tracker(&store, &app_files.snapshot_writer());
                     let handle_result = command.handle(tracker);
 
                     if let Some(event) = handle_result {
@@ -76,7 +108,7 @@ fn main() {
                             "listens".to_string(),
                             &event,
                             event.version,
-                            &message_writer,
+                            &app_files.streams_writer(),
                         ) {
                             println!("{:?}", err);
                         }
