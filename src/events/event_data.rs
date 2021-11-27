@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use super::listen_added::ListenAdded;
+use super::{track_play_added::TrackPlayAdded, track_skipped::TrackSkipped};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum EventData {
-    ListenAdded(ListenAdded),
+    TrackPlayAdded(TrackPlayAdded),
+    TrackPlayIgnored(TrackSkipped),
 }

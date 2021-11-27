@@ -3,7 +3,7 @@ use std::{
     io::{BufWriter, Write},
 };
 
-use crate::{events::event_data::EventData, history::listen::Listen, stores::store::Store};
+use crate::{events::event_data::EventData, stores::store::Store};
 
 use super::listen_tracker::{build_id, ListenTracker};
 
@@ -40,12 +40,15 @@ impl Repository {
 
         for event in event_stream.events.iter() {
             match &event.data {
-                EventData::ListenAdded(listen) => {
+                EventData::TrackPlayAdded(listen) => {
                     let id = build_id(&listen.artist_name, &listen.track_name, &listen.end_time);
                     self.listen_tracker.version += 1;
-                    self.listen_tracker
-                        .listens
-                        .insert(id.clone(), Listen::build(&id, &listen))
+                    self.listen_tracker.listens.insert(id.clone())
+                }
+                EventData::TrackPlayIgnored(ignored) => {
+                    let id = build_id(&ignored.artist_name, &ignored.track_name, &ignored.end_time);
+                    self.listen_tracker.version += 1;
+                    self.listen_tracker.listens.insert(id.clone())
                 }
             };
         }

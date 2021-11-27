@@ -5,15 +5,17 @@ mod projections;
 mod spotify;
 mod stores;
 
-use std::{env, fs};
+use std::{env, fs::{self, File}, io::{BufWriter, Write}};
 
-use spotify::listen::Listen;
+use spotify::track_play::TrackPlay;
 
 use crate::{
     commands::add_spotify_listen::AddSpotifyListen,
     projections::{repository::Repository, stats::Stats},
     stores::store::Store,
 };
+
+pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,7 +27,7 @@ fn main() {
 
     let file_name = "./derrick_garbage/streaming_history.json";
     let contents = fs::read_to_string(file_name).unwrap();
-    let listens: Vec<Listen> = serde_json::from_str(&contents).unwrap();
+    let listens: Vec<TrackPlay> = serde_json::from_str(&contents).unwrap();
     let mut store = Store::build("./derrick_garbage/messages.json".to_string());
 
     match run_command.as_str() {
@@ -37,6 +39,7 @@ fn main() {
             for listen in listens.iter() {
                 let command = AddSpotifyListen {
                     listen: listen.clone(),
+                    min_listen_length: MIN_LISTEN_LENGTH,
                 };
                 let tracker = repository.get_tracker(&store);
 
@@ -59,36 +62,56 @@ fn main() {
         }
         _ => {
             let event_stream = store.get_events("listens".to_string()).unwrap();
-            let artist_stats = Stats::count_by_artist(event_stream.events.iter().collect());
-            let top_10 = artist_stats.top(10);
+            let stats = Stats::count(event_stream.events.iter().collect());
 
-            println!("=========== Artists ==========");
-            println!("");
+            println!("=========== Artist Total Plays ==========");
+            print!("\n");
+            let top_10 = stats.top(10);
 
-            for artist_count in top_10.iter() {
-                println!("{} - {}", artist_count.name, artist_count.play_count);
+            for artist in top_10 {
+                println!("{} - {}", artist.artist_name, artist.total_plays());
             }
 
-            println!("");
-            println!("=========== Songs ==========");
-            println!("");
+            print!("\n\n");
 
-            let song_stats = Stats::count_by_track(event_stream.events.iter().collect());
+            println!("=========== Most Played Songs ==========");
+            print!("\n");
+            let top_10_songs = stats.top_songs(10);
 
-            let top_10_songs = song_stats.top(25);
-            for song_count in top_10_songs.iter() {
-                println!("{} - {} - {}", song_count.artist_name, song_count.name, song_count.play_count);
+            for song_count in top_10_songs {
+                println!("{} - {} - {}", song_count.artist_name, song_count.song_name, song_count.count);
             }
 
-            println!("");
+            print!("\n\n");
             println!("=========== Unique Artists Songs ==========");
-            println!("");
+            print!("\n");
 
-            let top_10_unique_artists = song_stats.top_unique_artists(25);
-            for song_count in top_10_unique_artists.iter() {
-                println!("{} - {} - {}", song_count.artist_name, song_count.name, song_count.play_count);
+            let top_unique_artists = stats.top_unique_artists(10);
+
+            for top_artist in top_unique_artists {
+                let max_song = &top_artist.max_song_play();
+                println!("{} - {} - {}", top_artist.artist_name, max_song.song_name.clone(), max_song.count);
             }
-            println!("");
+
+            print!("\n\n");
+            println!("Total artists listened to - {}", stats.artist_count());
+
+            let file = File::create("./derrick_garbage/stats.json").unwrap();
+            let mut writer = BufWriter::new(file);
+            serde_json::to_writer(&mut writer, &stats).unwrap();
+            writer.flush().unwrap();
+
+            let top_50_artists = stats.top(50);
+            let top_50_file = File::create("./derrick_garbage/top_50_stats.json").unwrap();
+            let mut writer = BufWriter::new(top_50_file);
+            serde_json::to_writer(&mut writer, &top_50_artists).unwrap();
+            writer.flush().unwrap();
+
+            let top_100_artists = stats.top(100);
+            let top_100_file = File::create("./derrick_garbage/top_100_stats.json").unwrap();
+            let mut writer = BufWriter::new(top_100_file);
+            serde_json::to_writer(&mut writer, &top_100_artists).unwrap();
+            writer.flush().unwrap();
         }
     }
 }

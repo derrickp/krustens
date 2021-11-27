@@ -1,11 +1,15 @@
 use crate::{
-    events::{event::Event, event_data::EventData, listen_added::ListenAdded},
+    events::{
+        event::Event, event_data::EventData, track_play_added::TrackPlayAdded,
+        track_skipped::TrackSkipped,
+    },
     projections::{has_listen::HasListen, listen_tracker::ListenTracker},
-    spotify::listen::Listen,
+    spotify::track_play::TrackPlay,
 };
 
 pub struct AddSpotifyListen {
-    pub listen: Listen,
+    pub listen: TrackPlay,
+    pub min_listen_length: u64,
 }
 
 impl AddSpotifyListen {
@@ -18,15 +22,25 @@ impl AddSpotifyListen {
             return None;
         }
 
-        let event = Event {
-            version: tracker.version + 1,
-            data: EventData::ListenAdded(ListenAdded {
+        let data = if self.listen.ms_played <= self.min_listen_length {
+            EventData::TrackPlayIgnored(TrackSkipped {
                 artist_name: self.listen.artist_name.clone(),
                 track_name: self.listen.track_name.clone(),
                 end_time: self.listen.end_time.clone(),
                 ms_played: self.listen.ms_played,
-            }),
+            })
+        } else {
+            EventData::TrackPlayAdded(TrackPlayAdded {
+                artist_name: self.listen.artist_name.clone(),
+                track_name: self.listen.track_name.clone(),
+                end_time: self.listen.end_time.clone(),
+                ms_played: self.listen.ms_played,
+            })
         };
-        Some(event)
+
+        Some(Event {
+            data,
+            version: tracker.version + 1,
+        })
     }
 }
