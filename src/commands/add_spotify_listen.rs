@@ -3,7 +3,7 @@ use crate::{
         event::Event, event_data::EventData, track_play_added::TrackPlayAdded,
         track_skipped::TrackSkipped,
     },
-    projections::{has_listen::HasListen, listen_tracker::ListenTracker},
+    projections::has_listen::HasListen,
     spotify::track_play::TrackPlay,
 };
 
@@ -13,7 +13,7 @@ pub struct AddSpotifyListen {
 }
 
 impl AddSpotifyListen {
-    pub fn handle(&self, tracker: &ListenTracker) -> Option<Event> {
+    pub fn handle(&self, tracker: &impl HasListen) -> Option<Event> {
         if tracker.has_listen(
             &self.listen.artist_name,
             &self.listen.track_name,
@@ -40,7 +40,7 @@ impl AddSpotifyListen {
 
         Some(Event {
             data,
-            version: tracker.version + 1,
+            version: tracker.version() + 1,
         })
     }
 }

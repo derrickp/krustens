@@ -19,11 +19,11 @@ impl Stats {
             match &event.data {
                 EventData::TrackPlayAdded(listen) => stats
                     .entry(listen.artist_name.clone())
-                    .or_insert(PlayCount::build(listen.artist_name.clone()))
+                    .or_insert_with(|| PlayCount::build(listen.artist_name.clone()))
                     .increment_song(&listen.track_name),
                 EventData::TrackPlayIgnored(ignored) => skipped
                     .entry(ignored.artist_name.clone())
-                    .or_insert(SkippedTrack::build(ignored.artist_name.clone()))
+                    .or_insert_with(|| SkippedTrack::build(ignored.artist_name.clone()))
                     .increment_song(&ignored.track_name),
             }
         }
@@ -107,7 +107,7 @@ impl PlayCount {
             .map(|(song_name, count)| SongPlayCount {
                 artist_name: self.artist_name.clone(),
                 song_name: song_name.clone(),
-                count: count.clone(),
+                count: *count,
             })
             .collect()
     }
@@ -118,10 +118,10 @@ impl PlayCount {
             .map(|(song_name, count)| SongPlayCount {
                 artist_name: self.artist_name.clone(),
                 song_name: song_name.clone(),
-                count: count.clone(),
+                count: *count,
             })
             .max_by_key(|song_count| song_count.count)
-            .unwrap_or(SongPlayCount::default())
+            .unwrap_or_default()
     }
 }
 

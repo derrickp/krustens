@@ -1,32 +1,31 @@
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{BufWriter, Write},
-};
+use std::collections::HashMap;
 
-use crate::{events::event::Event, stores::message::Message};
+use crate::{
+    events::event::Event,
+    persistence::{reader::Reader, writer::Writer},
+    stores::message::Message,
+};
 
 use super::{
     add_event_error::AddEventError, event_stream::EventStream, get_events_error::GetEventsError,
 };
 
+pub type MessageCollection = HashMap<String, Vec<Message>>;
+
 #[derive(Default)]
 pub struct Store {
-    collection: HashMap<String, Vec<Message>>,
-    storage_path: String,
+    collection: MessageCollection,
     flush_count: usize,
     current_not_flushed: usize,
 }
 
-impl Store {
-    pub fn build(path: String) -> Self {
-        let contents = fs::read_to_string(&path).unwrap_or_else(|_| "{}".to_string());
-        let messages: HashMap<String, Vec<Message>> = serde_json::from_str(&contents).unwrap();
+impl<'a> Store {
+    pub fn build(reader: &impl Reader<'a, MessageCollection>) -> Self {
+        let messages = reader.read().unwrap_or_default();
 
         Self {
             collection: messages,
-            storage_path: path,
-            flush_count: 100,
+            flush_count: 1000,
             current_not_flushed: 0,
         }
     }
@@ -43,6 +42,7 @@ impl Store {
         stream: String,
         event: &Event,
         expected_version: u64,
+        writer: &impl Writer<MessageCollection>,
     ) -> Result<bool, AddEventError> {
         let message_count = self
             .collection
@@ -67,10 +67,7 @@ impl Store {
         self.current_not_flushed += 1;
 
         if self.current_not_flushed > self.flush_count {
-            let file = File::create(self.storage_path.clone()).unwrap();
-            let mut writer = BufWriter::new(file);
-            serde_json::to_writer(&mut writer, &self.collection).unwrap();
-            writer.flush().unwrap();
+            writer.write(&self.collection).unwrap();
             self.current_not_flushed = 0;
         }
 

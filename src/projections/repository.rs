@@ -1,32 +1,38 @@
-use std::{
-    fs::{self, File},
-    io::{BufWriter, Write},
+use crate::{
+    events::event_data::EventData,
+    persistence::{reader::Reader, writer::Writer},
+    stores::store::Store,
 };
 
-use crate::{events::event_data::EventData, stores::store::Store};
-
-use super::listen_tracker::{build_id, ListenTracker};
+use super::{
+    has_listen::HasListen,
+    listen_tracker::{build_id, ListenTracker},
+};
 
 pub struct Repository {
     listen_tracker: ListenTracker,
-    path: String,
     dirty: bool,
+    buffer_count: usize,
+    not_persisted_count: usize,
 }
 
-impl Repository {
-    pub fn build(path: &str) -> Self {
-        let contents = fs::read_to_string(&path).unwrap_or_else(|_| "{}".to_string());
-        let listen_tracker: ListenTracker =
-            serde_json::from_str(&contents).unwrap_or(ListenTracker::default());
+impl<'a> Repository {
+    pub fn build(buffer_count: usize, reader: &impl Reader<'a, ListenTracker>) -> Self {
+        let listen_tracker = reader.read().unwrap_or_default();
 
         Self {
             listen_tracker,
-            path: path.to_string(),
+            buffer_count,
             dirty: false,
+            not_persisted_count: 0,
         }
     }
 
-    pub fn get_tracker(&mut self, store: &Store) -> &ListenTracker {
+    pub fn get_tracker(
+        &mut self,
+        store: &Store,
+        writer: &impl Writer<ListenTracker>,
+    ) -> &impl HasListen {
         let current_version = self.listen_tracker.version;
         let store_version = store.stream_version("listens".to_string());
 
@@ -51,21 +57,20 @@ impl Repository {
                     self.listen_tracker.listens.insert(id.clone())
                 }
             };
+            self.not_persisted_count += 1;
         }
         self.dirty = true;
+
+        if self.not_persisted_count >= self.buffer_count {
+            writer.write(&self.listen_tracker).unwrap();
+            self.reset_persistence();
+        }
 
         &self.listen_tracker
     }
 
-    pub fn flush(&mut self) {
-        if !self.dirty {
-            return;
-        }
-
-        let file = File::create(&self.path).unwrap();
-        let mut writer = BufWriter::new(file);
-        serde_json::to_writer(&mut writer, &self.listen_tracker).unwrap();
-        writer.flush().unwrap();
-        self.dirty = false
+    pub fn reset_persistence(&mut self) {
+        self.dirty = false;
+        self.not_persisted_count = 0;
     }
 }

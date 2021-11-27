@@ -15,6 +15,10 @@ impl HasListen for ListenTracker {
         let id = build_id(artist_name, track_name, end_time);
         self.listens.contains(&id)
     }
+
+    fn version(&self) -> u64 {
+        self.version
+    }
 }
 
 pub fn build_id(artist_name: &str, track_name: &str, end_time: &str) -> String {
