@@ -1,0 +1,5 @@
+{
+    "history_folder": "./data/spotify_play_history",
+    "output_folder": "./output",
+    "count_general_stats_to_compile": 25
+}
