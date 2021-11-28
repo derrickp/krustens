@@ -7,13 +7,31 @@ use serde::Serialize;
 
 use super::{write_error::WriteError, writer::Writer};
 
+pub enum FileType {
+    Yaml,
+    Json,
+}
+
 pub struct FileWriter {
     path: String,
+    file_type: FileType,
 }
 
 impl From<String> for FileWriter {
     fn from(path: String) -> Self {
-        Self { path }
+        Self {
+            path,
+            file_type: FileType::Json,
+        }
+    }
+}
+
+impl FileWriter {
+    pub fn yaml_writer(path: String) -> Self {
+        Self {
+            path,
+            file_type: FileType::Yaml,
+        }
     }
 }
 
@@ -28,13 +46,24 @@ impl<T: Serialize> Writer<T> for FileWriter {
             }
         };
         let mut writer = BufWriter::new(file);
-        match serde_json::to_writer(&mut writer, &value) {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(WriteError {
-                    message: e.to_string(),
-                })
-            }
+
+        match self.file_type {
+            FileType::Json => match serde_json::to_writer(&mut writer, value) {
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(WriteError {
+                        message: e.to_string(),
+                    })
+                }
+            },
+            FileType::Yaml => match serde_yaml::to_writer(&mut writer, value) {
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(WriteError {
+                        message: e.to_string(),
+                    })
+                }
+            },
         }
 
         match writer.flush() {
