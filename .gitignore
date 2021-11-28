@@ -1,2 +1,6 @@
 /target
 /app_data
+/data
+/output
+/build
+*.zip
