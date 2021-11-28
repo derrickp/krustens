@@ -10,8 +10,16 @@ pub struct Stats {
     pub skipped: HashMap<String, SkippedTrack>,
 }
 
+#[derive(Serialize)]
+pub struct GeneralStats {
+    pub count_artists_listened_to: usize,
+    pub artist_total_plays: Vec<String>,
+    pub most_played_songs: Vec<String>,
+    pub artist_most_played_songs: Vec<String>,
+}
+
 impl Stats {
-    pub fn count(events: Vec<&Event>) -> Self {
+    pub fn generate(events: Vec<&Event>) -> Self {
         let mut stats: HashMap<String, PlayCount> = HashMap::new();
         let mut skipped: HashMap<String, SkippedTrack> = HashMap::new();
 
@@ -29,6 +37,46 @@ impl Stats {
         }
 
         Self { stats, skipped }
+    }
+
+    pub fn general_stats(&self, count: usize) -> GeneralStats {
+        let artist_total_plays: Vec<String> = self
+            .top(count)
+            .iter()
+            .map(|play_count| format!("{} - {}", play_count.artist_name, play_count.total_plays()))
+            .collect();
+
+        let most_played_songs: Vec<String> = self
+            .top_songs(count)
+            .iter()
+            .map(|song_count| {
+                format!(
+                    "{} - {} - {}",
+                    song_count.artist_name, song_count.song_name, song_count.count
+                )
+            })
+            .collect();
+
+        let unique_artists_most_played_songs: Vec<String> = self
+            .top_unique_artists(count)
+            .iter()
+            .map(|play_count| {
+                let max_song = &play_count.max_song_play();
+                format!(
+                    "{} - {} - {}",
+                    play_count.artist_name,
+                    max_song.song_name.clone(),
+                    max_song.count
+                )
+            })
+            .collect();
+
+        GeneralStats {
+            artist_total_plays,
+            most_played_songs,
+            artist_most_played_songs: unique_artists_most_played_songs,
+            count_artists_listened_to: self.artist_count(),
+        }
     }
 
     pub fn artist_count(&self) -> usize {
