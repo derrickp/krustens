@@ -9,7 +9,7 @@ mod stores;
 
 use std::{
     env,
-    fs::{self, create_dir},
+    fs::{self, create_dir, create_dir_all},
     path::Path,
 };
 
@@ -66,7 +66,7 @@ fn main() {
     }
 
     if !Path::new(&config.stats_folder()).exists() {
-        create_dir(&config.stats_folder()).unwrap()
+        create_dir_all(&config.stats_folder()).unwrap()
     }
 
     let existing_stream = match fs::read_to_string(app_files.streams_file()) {
@@ -114,7 +114,8 @@ fn process_listens(app_files: AppFiles, config: Config, mut store: Store) {
         contents: &snapshot_contents,
     };
     let mut repository = Repository::build(1500, &snapshot_reader);
-    let streaming_files = fs::read_dir(&config.history_folder).unwrap();
+    let streaming_files = fs::read_dir(&config.history_folder)
+        .expect(format!("Could not read {}", &config.history_folder).as_str());
 
     for entry in streaming_files.into_iter() {
         let path = entry.unwrap().path().clone();
