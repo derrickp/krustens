@@ -13,6 +13,7 @@ use std::{
     path::Path,
 };
 
+use config::Config;
 use spotify::track_play::TrackPlay;
 
 use crate::{
@@ -57,13 +58,16 @@ fn main() {
     let app_files = AppFiles {
         folder: "./app_data",
     };
+    let config_content = fs::read_to_string("./resources/config.json").unwrap();
+    let config: Config = serde_json::from_str(&config_content).unwrap();
 
     if !Path::new(app_files.folder).exists() {
         create_dir(app_files.folder).unwrap();
     }
 
-    let history_folder = "./derrick_garbage/spotify_play_history";
-    let stats_folder = "./derrick_garbage/output/stats";
+    if !Path::new(&config.stats_folder()).exists() {
+        create_dir(&config.stats_folder()).unwrap()
+    }
 
     let existing_stream = match fs::read_to_string(app_files.streams_file()) {
         Ok(it) => it,
@@ -72,111 +76,75 @@ fn main() {
     let stream_reader = JsonReader {
         contents: &existing_stream,
     };
-    let mut store = Store::build(&stream_reader);
 
     match run_command.as_str() {
         "process_listens" => {
-            let snapshot_contents = match fs::read_to_string(app_files.snapshot_file()) {
-                Ok(it) => it,
-                _ => "".to_string(),
-            };
-            let snapshot_reader = JsonReader {
-                contents: &snapshot_contents,
-            };
-            let mut repository = Repository::build(1500, &snapshot_reader);
-            let streaming_files = fs::read_dir(history_folder).unwrap();
-
-            for entry in streaming_files.into_iter() {
-                let path = entry.unwrap().path().clone();
-
-                if !path.display().to_string().ends_with(".json") {
-                    continue;
-                }
-
-                let contents = fs::read_to_string(path.display().to_string()).unwrap();
-                let listens: Vec<TrackPlay> = serde_json::from_str(&contents).unwrap();
-                let mut listen_count = 0;
-                for listen in listens.iter() {
-                    let command = AddSpotifyListen {
-                        listen: listen.clone(),
-                        min_listen_length: MIN_LISTEN_LENGTH,
-                    };
-                    let tracker = repository.get_tracker(&store, &app_files.snapshot_writer());
-                    let handle_result = command.handle(tracker);
-
-                    if let Some(event) = handle_result {
-                        if let Err(err) = store.add_event(
-                            "listens".to_string(),
-                            &event,
-                            event.version,
-                            &app_files.streams_writer(),
-                        ) {
-                            println!("{:?}", err);
-                        }
-                    }
-
-                    listen_count += 1;
-                }
-
-                println!("read {} listens", listen_count);
-            }
+            process_listens(app_files, config, Store::build(&stream_reader));
         }
         _ => {
-            let event_stream = store.get_events("listens".to_string()).unwrap();
-            let stats = Stats::count(event_stream.events.iter().collect());
-
-            println!("=========== Artist Total Plays ==========");
-            println!();
-            let top_10 = stats.top(10);
-
-            for artist in top_10 {
-                println!("{} - {}", artist.artist_name, artist.total_plays());
-            }
-
-            println!();
-            println!();
-
-            println!("=========== Most Played Songs ==========");
-            println!();
-            let top_10_songs = stats.top_songs(10);
-
-            for song_count in top_10_songs {
-                println!(
-                    "{} - {} - {}",
-                    song_count.artist_name, song_count.song_name, song_count.count
-                );
-            }
-
-            println!();
-            println!();
-            println!("=========== Unique Artists Songs ==========");
-            println!();
-
-            let top_unique_artists = stats.top_unique_artists(10);
-
-            for top_artist in top_unique_artists {
-                let max_song = &top_artist.max_song_play();
-                println!(
-                    "{} - {} - {}",
-                    top_artist.artist_name,
-                    max_song.song_name.clone(),
-                    max_song.count
-                );
-            }
-
-            println!();
-            println!("Total artists listened to - {}", stats.artist_count());
-
-            let complete_stats_writer = FileWriter::from(format!("{}/complete.json", stats_folder));
-            complete_stats_writer.write(&stats).unwrap();
-
-            let top_50_artists = stats.top(50);
-            let top_50_writer = FileWriter::from(format!("{}/top_50.json", stats_folder));
-            top_50_writer.write(&top_50_artists).unwrap();
-
-            let top_100_artists = stats.top(100);
-            let top_100_writer = FileWriter::from(format!("{}/top_100.json", stats_folder));
-            top_100_writer.write(&top_100_artists).unwrap();
+            generate_stats(config, Store::build(&stream_reader));
         }
+    }
+}
+
+fn generate_stats(config: Config, store: Store) {
+    let event_stream = store.get_events("listens".to_string()).unwrap();
+    let stats = Stats::generate(event_stream.events.iter().collect());
+
+    FileWriter::yaml_writer(config.general_stats_file())
+        .write(&stats.general_stats(config.count_general_stats_to_compile))
+        .unwrap();
+    FileWriter::from(config.complete_stats_file())
+        .write(&stats)
+        .unwrap();
+    FileWriter::from(config.top_50_stats_file())
+        .write(&stats.top(50))
+        .unwrap();
+    FileWriter::from(config.top_100_stats_file())
+        .write(&stats.top(100))
+        .unwrap();
+}
+
+fn process_listens(app_files: AppFiles, config: Config, mut store: Store) {
+    let snapshot_contents = match fs::read_to_string(app_files.snapshot_file()) {
+        Ok(it) => it,
+        _ => "".to_string(),
+    };
+    let snapshot_reader = JsonReader {
+        contents: &snapshot_contents,
+    };
+    let mut repository = Repository::build(1500, &snapshot_reader);
+    let streaming_files = fs::read_dir(&config.history_folder).unwrap();
+
+    for entry in streaming_files.into_iter() {
+        let path = entry.unwrap().path().clone();
+
+        if !path.display().to_string().ends_with(".json") {
+            continue;
+        }
+
+        let contents = fs::read_to_string(&path.display().to_string()).unwrap();
+        let listens: Vec<TrackPlay> = serde_json::from_str(&contents).unwrap();
+        for listen in listens.iter() {
+            let command = AddSpotifyListen {
+                listen: listen.clone(),
+                min_listen_length: MIN_LISTEN_LENGTH,
+            };
+            let tracker = repository.get_tracker(&store, &app_files.snapshot_writer());
+            let handle_result = command.handle(tracker);
+
+            if let Some(event) = handle_result {
+                if let Err(err) = store.add_event(
+                    "listens".to_string(),
+                    &event,
+                    event.version,
+                    &app_files.streams_writer(),
+                ) {
+                    println!("{:?}", err);
+                }
+            }
+        }
+
+        println!("processed {}", path.display().to_string());
     }
 }
