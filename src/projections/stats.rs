@@ -1,74 +1,95 @@
+pub mod general;
+pub mod play_count;
+pub mod skipped_track;
+pub mod song_play_count;
+
 use std::{cmp::Reverse, collections::HashMap};
 
-use serde::{Deserialize, Serialize};
+use chrono::{Datelike, NaiveDateTime, ParseResult};
+use serde::Serialize;
 
 use crate::events::{event::Event, event_data::EventData};
 
-#[derive(Debug, Deserialize, Serialize)]
+use self::{
+    general::GeneralStats, play_count::PlayCount, skipped_track::SkippedTrack,
+    song_play_count::SongPlayCount,
+};
+
+#[derive(Debug, Serialize, Default)]
 pub struct Stats {
     pub stats: HashMap<String, PlayCount>,
     pub skipped: HashMap<String, SkippedTrack>,
 }
 
-#[derive(Serialize)]
-pub struct GeneralStats {
-    pub count_artists_listened_to: usize,
-    pub artist_total_plays: Vec<String>,
-    pub most_played_songs: Vec<String>,
-    pub artist_most_played_songs: Vec<String>,
+fn parse_end_time(end_time: &str) -> ParseResult<NaiveDateTime> {
+    NaiveDateTime::parse_from_str(end_time, "%Y-%m-%d %H:%M")
 }
 
 impl Stats {
-    pub fn generate(events: Vec<&Event>) -> Self {
-        let mut stats: HashMap<String, PlayCount> = HashMap::new();
-        let mut skipped: HashMap<String, SkippedTrack> = HashMap::new();
+    pub fn generate_for_year(events: Vec<&Event>, year: i32) -> Self {
+        let matching_events = events
+            .into_iter()
+            .filter(|event| {
+                let end_time = match &event.data {
+                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayIgnored(ignored) => {
+                        parse_end_time(ignored.end_time.as_str())
+                    }
+                };
 
-        for event in events {
+                if end_time.is_err() {
+                    return false;
+                } else {
+                    return end_time.unwrap().year().eq(&year);
+                }
+            })
+            .collect();
+
+        Self::generate(matching_events)
+    }
+
+    pub fn generate(events: Vec<&Event>) -> Self {
+        let mut stats = events.iter().fold(Self::default(), |mut acc, event| {
             match &event.data {
-                EventData::TrackPlayAdded(listen) => stats
+                EventData::TrackPlayAdded(listen) => acc
+                    .stats
                     .entry(listen.artist_name.clone())
                     .or_insert_with(|| PlayCount::build(listen.artist_name.clone()))
-                    .increment_song(&listen.track_name),
-                EventData::TrackPlayIgnored(ignored) => skipped
+                    .increment_song(&listen.track_name, listen.ms_played),
+                EventData::TrackPlayIgnored(ignored) => acc
+                    .skipped
                     .entry(ignored.artist_name.clone())
                     .or_insert_with(|| SkippedTrack::build(ignored.artist_name.clone()))
                     .increment_song(&ignored.track_name),
-            }
+            };
+
+            acc
+        });
+
+        for play_count in stats.stats.values_mut() {
+            play_count.sort_by_song_count();
         }
 
-        Self { stats, skipped }
+        stats
     }
 
     pub fn general_stats(&self, count: usize) -> GeneralStats {
         let artist_total_plays: Vec<String> = self
             .top(count)
             .iter()
-            .map(|play_count| format!("{} - {}", play_count.artist_name, play_count.total_plays()))
+            .map(PlayCount::total_plays_display)
             .collect();
 
         let most_played_songs: Vec<String> = self
             .top_songs(count)
             .iter()
-            .map(|song_count| {
-                format!(
-                    "{} - {} - {}",
-                    song_count.artist_name, song_count.song_name, song_count.count
-                )
-            })
+            .map(ArtistAndSongPlays::display)
             .collect();
 
         let unique_artists_most_played_songs: Vec<String> = self
             .top_unique_artists(count)
             .iter()
-            .map(|play_count| {
-                let max_song = &play_count.max_song_play();
-                format!(
-                    "{} - {} - {}",
-                    play_count.artist_name,
-                    max_song.song_name.clone(),
-                    max_song.count
-                )
-            })
+            .map(PlayCount::max_song_display)
             .collect();
 
         GeneralStats {
@@ -89,93 +110,46 @@ impl Stats {
         counts.into_iter().take(count).collect()
     }
 
-    pub fn top_songs(&self, count: usize) -> Vec<SongPlayCount> {
-        let mut counts: Vec<SongPlayCount> = self
+    pub fn top_songs(&self, count: usize) -> Vec<ArtistAndSongPlays> {
+        let mut counts: Vec<ArtistAndSongPlays> = self
             .stats
             .values()
             .cloned()
-            .flat_map(|play_count| play_count.all_song_plays())
+            .flat_map(|play_count| {
+                play_count
+                    .all_song_plays()
+                    .iter()
+                    .map(|song_count| ArtistAndSongPlays {
+                        artist_name: play_count.artist_name.clone(),
+                        song_count: song_count.clone(),
+                    })
+                    .collect::<Vec<_>>()
+            })
             .collect();
-        counts.sort_by_key(|song_play_count| Reverse(song_play_count.count));
+        counts.sort_by_key(|song_play_count| Reverse(song_play_count.song_count.1));
         counts.into_iter().take(count).collect()
     }
 
     pub fn top_unique_artists(&self, count: usize) -> Vec<PlayCount> {
         let mut counts: Vec<PlayCount> = self.stats.values().cloned().collect();
 
-        counts.sort_by_key(|play| Reverse(play.max_song_play().count));
+        counts.sort_by_key(|play| Reverse(play.max_song_play().1));
         counts.into_iter().take(count).collect()
     }
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize)]
-pub struct PlayCount {
+pub struct ArtistAndSongPlays {
     pub artist_name: String,
-    pub song_counts: HashMap<String, u64>,
+    pub song_count: SongPlayCount,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct SkippedTrack {
-    pub artist_name: String,
-    pub song_counts: HashMap<String, u64>,
-}
-
-impl SkippedTrack {
-    pub fn build(artist_name: String) -> Self {
-        Self {
-            artist_name,
-            song_counts: HashMap::new(),
-        }
+impl ArtistAndSongPlays {
+    pub fn display(&self) -> String {
+        format!(
+            "{} - {} - {}",
+            self.artist_name.clone(),
+            self.song_count.0.clone(),
+            self.song_count.1
+        )
     }
-
-    pub fn increment_song(&mut self, song_name: &str) {
-        *self.song_counts.entry(song_name.to_string()).or_insert(0) += 1;
-    }
-}
-
-impl PlayCount {
-    pub fn build(artist_name: String) -> Self {
-        Self {
-            artist_name,
-            song_counts: HashMap::new(),
-        }
-    }
-
-    pub fn total_plays(&self) -> u64 {
-        self.song_counts.values().copied().sum()
-    }
-
-    pub fn increment_song(&mut self, song_name: &str) {
-        *self.song_counts.entry(song_name.to_string()).or_insert(0) += 1;
-    }
-
-    pub fn all_song_plays(&self) -> Vec<SongPlayCount> {
-        self.song_counts
-            .iter()
-            .map(|(song_name, count)| SongPlayCount {
-                artist_name: self.artist_name.clone(),
-                song_name: song_name.clone(),
-                count: *count,
-            })
-            .collect()
-    }
-
-    pub fn max_song_play(&self) -> SongPlayCount {
-        self.song_counts
-            .iter()
-            .map(|(song_name, count)| SongPlayCount {
-                artist_name: self.artist_name.clone(),
-                song_name: song_name.clone(),
-                count: *count,
-            })
-            .max_by_key(|song_count| song_count.count)
-            .unwrap_or_default()
-    }
-}
-
-#[derive(Default)]
-pub struct SongPlayCount {
-    pub artist_name: String,
-    pub song_name: String,
-    pub count: u64,
 }
