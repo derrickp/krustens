@@ -68,7 +68,7 @@ fn main() {
 
 fn generate_stats(config: Config, store: Store) {
     let event_stream = store.get_events("listens".to_string()).unwrap();
-    let stats = Stats::generate(event_stream.events.iter().collect());
+    let stats = Stats::generate_for_year(event_stream.events.iter().collect(), 2021);
 
     FileWriter::yaml_writer(config.general_stats_file())
         .write(&stats.general_stats(config.count_general_stats_to_compile))
