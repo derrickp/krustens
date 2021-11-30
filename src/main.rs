@@ -1,7 +1,6 @@
 mod commands;
 mod config;
 mod events;
-mod history;
 mod persistence;
 mod projections;
 mod spotify;
