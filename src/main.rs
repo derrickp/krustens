@@ -1,3 +1,4 @@
+mod app_files;
 mod commands;
 mod config;
 mod events;
@@ -12,6 +13,7 @@ use std::{
     path::Path,
 };
 
+use app_files::AppFiles;
 use config::Config;
 use spotify::track_play::TrackPlay;
 
@@ -23,28 +25,6 @@ use crate::{
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
-
-struct AppFiles {
-    folder: &'static str,
-}
-
-impl AppFiles {
-    fn streams_file(&self) -> String {
-        format!("{}/streams.json", self.folder)
-    }
-
-    fn snapshot_file(&self) -> String {
-        format!("{}/snapshot.json", self.folder)
-    }
-
-    fn streams_writer(&self) -> FileWriter {
-        FileWriter::from(self.streams_file())
-    }
-
-    fn snapshot_writer(&self) -> FileWriter {
-        FileWriter::from(self.snapshot_file())
-    }
-}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
