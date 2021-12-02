@@ -8,27 +8,27 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn stats_file_name(&self, name: &str) -> String {
-        format!("{}/stats/{}", self.output_folder, name)
+    pub fn stats_file_name(output_folder: &str, name: &str) -> String {
+        format!("{}/stats/{}", output_folder, name)
     }
 
-    pub fn stats_folder(&self) -> String {
-        format!("{}/stats", self.output_folder)
+    pub fn stats_folder(output_folder: &str) -> String {
+        format!("{}/stats", output_folder)
     }
 
-    pub fn general_stats_file(&self) -> String {
-        self.stats_file_name("general.yaml")
+    pub fn general_stats_file(output_folder: &str) -> String {
+        Self::stats_file_name(output_folder, "general.yaml")
     }
 
-    pub fn complete_stats_file(&self) -> String {
-        self.stats_file_name("complete.json")
+    pub fn complete_stats_file(output_folder: &str) -> String {
+        Self::stats_file_name(output_folder, "complete.json")
     }
 
-    pub fn top_50_stats_file(&self) -> String {
-        self.stats_file_name("top_50.json")
+    pub fn top_50_stats_file(output_folder: &str) -> String {
+        Self::stats_file_name(output_folder, "top_50.json")
     }
 
-    pub fn top_100_stats_file(&self) -> String {
-        self.stats_file_name("top_100.json")
+    pub fn top_100_stats_file(output_folder: &str) -> String {
+        Self::stats_file_name(output_folder, "top_100.json")
     }
 }

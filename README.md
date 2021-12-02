@@ -8,22 +8,16 @@ Get statistics from your Spotify history.
 ### Generating Listen Events
 `Krustens` reads the streaming history files and generates events it can read back later to generate the statistics. It does this to attempt to ensure that it does not double-count any duplicate track plays between the spotify history files. `Krustens` right now also counts any song played for less than a minute as "skipped".
 
-To start clone the repo and then fill in the config file `resources/config.json`, or ensure that your data locations match.
-```javascript
-{
-    "history_folder": "./data/spotify_play_history", // The location that `krustens` will read the history files from. It will read all JSON files in this directory
-    "output_folder": "./output", // Where the output statistics should go. It will place a `stats` folder in this location.
-    "count_general_stats_to_compile": 25 // For the general stats, this is the `Top` number to grab (e.g. Top 25 artists)
-}
-```
+To start clone the repo and run `cargo run -- -h` to see the defaults for the input and outputs. If you'd like to change those values, provide different options to `-o` or `-i`. The default for input is `./data/spotify_play_history` and output is `./output`.
+
 When `krustens` starts it will read its configuration from this file. Once this is done run
 ```bash
-cargo run process_listens
+cargo run -- -m process
 ```
-to generate the events. An `app_data` folder will be generated alongside the application which will contain a file of the events and a snapshot of what has been seen.
+to generate the events. `-m` denotes what mode to run in (process or generate). An `app_data` folder will be generated alongside the application which will contain a file of the events and a snapshot of what has been seen.
 
-Once the events have been generated, you can generate statistics by just running the program with no extra parameter.
+Once the events have been generated, you can generate statistics by just running the program with no extra parameter. (The default mode is `generate`)
 ```bash
 cargo run
 ```
-The `stats` folder will be generated and it will then contains a number of stats files. Right now all statistics generated are hard-coded, but more options will likely be added in the future.
+The `stats` folder will be generated and it will then contains a number of stats files. Right now the only real values that can be changed is the year to generate statistics for (e.g. 2020 or 2021) and how many _Top_ songs or artists to include in the general stats.

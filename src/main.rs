@@ -32,6 +32,35 @@ fn main() {
         .author("derrickp")
         .about("Generate stats from spotify history")
         .arg(
+            Arg::with_name("input")
+                .long("input")
+                .short("i")
+                .required(false)
+                .takes_value(true)
+                .help("folder that contains the spotify streaming history")
+                .default_value("./data/spotify_play_history"),
+        )
+        .arg(
+            Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .takes_value(true)
+                .help("Folder to place the generated stats in")
+                .default_value("./output"),
+        )
+        .arg(
+            Arg::with_name("count")
+                .long("count")
+                .short("c")
+                .takes_value(true)
+                .validator(|count| match str::parse::<usize>(&count) {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e.to_string()),
+                })
+                .help("how many top artists/songs to include in the generated general statistics")
+                .default_value("25"),
+        )
+        .arg(
             Arg::with_name("year")
                 .long("year")
                 .short("y")
@@ -57,19 +86,20 @@ fn main() {
         Some(it) => Some(str::parse::<i32>(&it).unwrap()),
         _ => None,
     };
+    let output_folder = matches.value_of("output").unwrap();
+    let input_folder = matches.value_of("input").unwrap();
+    let stats_count = str::parse::<usize>(matches.value_of("count").unwrap()).unwrap();
 
     let app_files = AppFiles {
         folder: "./app_data",
     };
-    let config_content = fs::read_to_string("./resources/config.json").unwrap();
-    let config: Config = serde_json::from_str(&config_content).unwrap();
 
     if !Path::new(app_files.folder).exists() {
         create_dir(app_files.folder).unwrap();
     }
 
-    if !Path::new(&config.stats_folder()).exists() {
-        create_dir_all(&config.stats_folder()).unwrap()
+    if !Path::new(Config::stats_folder(&output_folder).as_str()).exists() {
+        create_dir_all(Config::stats_folder(&output_folder).as_str()).unwrap()
     }
 
     let existing_stream = match fs::read_to_string(app_files.streams_file()) {
@@ -84,36 +114,41 @@ fn main() {
 
     match mode {
         "process" => {
-            process_listens(app_files, config, Store::build(&stream_reader));
+            process_listens(app_files, &input_folder, Store::build(&stream_reader));
         }
         _ => {
-            generate_stats(config, Store::build(&stream_reader), year);
+            generate_stats(
+                &output_folder,
+                stats_count,
+                Store::build(&stream_reader),
+                year,
+            );
         }
     }
 }
 
-fn generate_stats(config: Config, store: Store, year: Option<i32>) {
+fn generate_stats(stats_folder: &str, count: usize, store: Store, year: Option<i32>) {
     let event_stream = store.get_events("listens".to_string()).unwrap();
     let stats = match year {
         Some(it) => Stats::generate_for_year(event_stream.events.iter().collect(), it),
         _ => Stats::generate(event_stream.events.iter().collect()),
     };
 
-    FileWriter::yaml_writer(config.general_stats_file())
-        .write(&stats.general_stats(config.count_general_stats_to_compile))
+    FileWriter::yaml_writer(Config::general_stats_file(&stats_folder))
+        .write(&stats.general_stats(count))
         .unwrap();
-    FileWriter::from(config.complete_stats_file())
+    FileWriter::from(Config::complete_stats_file(&stats_folder))
         .write(&stats)
         .unwrap();
-    FileWriter::from(config.top_50_stats_file())
+    FileWriter::from(Config::top_50_stats_file(&stats_folder))
         .write(&stats.top(50))
         .unwrap();
-    FileWriter::from(config.top_100_stats_file())
+    FileWriter::from(Config::top_100_stats_file(&stats_folder))
         .write(&stats.top(100))
         .unwrap();
 }
 
-fn process_listens(app_files: AppFiles, config: Config, mut store: Store) {
+fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
     let snapshot_contents = match fs::read_to_string(app_files.snapshot_file()) {
         Ok(it) => it,
         _ => "".to_string(),
@@ -122,8 +157,8 @@ fn process_listens(app_files: AppFiles, config: Config, mut store: Store) {
         contents: &snapshot_contents,
     };
     let mut repository = Repository::build(1500, &snapshot_reader);
-    let streaming_files = fs::read_dir(&config.history_folder)
-        .expect(format!("Could not read {}", &config.history_folder).as_str());
+    let streaming_files =
+        fs::read_dir(&input_folder).expect(format!("Could not read {}", &input_folder).as_str());
 
     for entry in streaming_files.into_iter() {
         let path = entry.unwrap().path().clone();
@@ -133,7 +168,10 @@ fn process_listens(app_files: AppFiles, config: Config, mut store: Store) {
         }
 
         let contents = fs::read_to_string(&path.display().to_string()).unwrap();
-        let listens: Vec<TrackPlay> = serde_json::from_str(&contents).unwrap();
+        let listens: Vec<TrackPlay> = match serde_json::from_str(&contents) {
+            Ok(it) => it,
+            _ => continue,
+        };
         for listen in listens.iter() {
             let command = AddSpotifyListen {
                 listen: listen.clone(),
