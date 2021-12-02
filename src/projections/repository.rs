@@ -69,7 +69,16 @@ impl<'a> Repository {
         &self.listen_tracker
     }
 
-    pub fn reset_persistence(&mut self) {
+    pub fn flush(&mut self, writer: &impl Writer<ListenTracker>) {
+        if !self.dirty {
+            return;
+        }
+
+        writer.write(&self.listen_tracker).unwrap();
+        self.reset_persistence();
+    }
+
+    fn reset_persistence(&mut self) {
         self.dirty = false;
         self.not_persisted_count = 0;
     }

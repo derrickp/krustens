@@ -74,6 +74,11 @@ impl<'a> Store {
         Ok(true)
     }
 
+    pub fn flush(&mut self, writer: &impl Writer<MessageCollection>) {
+        writer.write(&self.collection).unwrap();
+        self.current_not_flushed = 0;
+    }
+
     pub fn get_events(&self, stream: String) -> Result<EventStream, GetEventsError> {
         let message_stream = match self.collection.get(&stream) {
             Some(it) => it,
