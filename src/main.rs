@@ -8,12 +8,12 @@ mod spotify;
 mod stores;
 
 use std::{
-    env,
     fs::{self, create_dir, create_dir_all},
     path::Path,
 };
 
 use app_files::AppFiles;
+use clap::{App, Arg};
 use config::Config;
 use spotify::track_play::TrackPlay;
 
@@ -27,11 +27,35 @@ use crate::{
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let app = App::new("krustens")
+        .version("0.1")
+        .author("derrickp")
+        .about("Generate stats from spotify history")
+        .arg(
+            Arg::with_name("year")
+                .long("year")
+                .short("y")
+                .required(false)
+                .takes_value(true)
+                .validator(|year| match str::parse::<i32>(&year) {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e.to_string()),
+                })
+                .help("year to generate stats for"),
+        )
+        .arg(
+            Arg::with_name("mode")
+                .long("mode")
+                .short("m")
+                .takes_value(true)
+                .possible_values(&["process", "generate"]),
+        );
 
-    let run_command = match args.get(1) {
-        Some(it) => it.clone(),
-        _ => "".to_string(),
+    let matches = app.get_matches();
+    let mode = matches.value_of("mode").unwrap_or("generate");
+    let year = match matches.value_of("year") {
+        Some(it) => Some(str::parse::<i32>(&it).unwrap()),
+        _ => None,
     };
 
     let app_files = AppFiles {
@@ -56,19 +80,24 @@ fn main() {
         contents: &existing_stream,
     };
 
-    match run_command.as_str() {
-        "process_listens" => {
+    println!("{}", mode.clone());
+
+    match mode {
+        "process" => {
             process_listens(app_files, config, Store::build(&stream_reader));
         }
         _ => {
-            generate_stats(config, Store::build(&stream_reader));
+            generate_stats(config, Store::build(&stream_reader), year);
         }
     }
 }
 
-fn generate_stats(config: Config, store: Store) {
+fn generate_stats(config: Config, store: Store, year: Option<i32>) {
     let event_stream = store.get_events("listens".to_string()).unwrap();
-    let stats = Stats::generate_for_year(event_stream.events.iter().collect(), 2021);
+    let stats = match year {
+        Some(it) => Stats::generate_for_year(event_stream.events.iter().collect(), it),
+        _ => Stats::generate(event_stream.events.iter().collect()),
+    };
 
     FileWriter::yaml_writer(config.general_stats_file())
         .write(&stats.general_stats(config.count_general_stats_to_compile))
@@ -127,4 +156,7 @@ fn process_listens(app_files: AppFiles, config: Config, mut store: Store) {
 
         println!("processed {}", path.display().to_string());
     }
+
+    repository.flush(&app_files.snapshot_writer());
+    store.flush(&app_files.streams_writer());
 }
