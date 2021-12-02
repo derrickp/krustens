@@ -1,5 +1,9 @@
 {
   "editor.detectIndentation": false,
   "editor.tabSize": 4,
-  "cSpell.words": ["chrono", "Datelike"]
+  "cSpell.words": [
+    "chrono",
+    "Datelike",
+    "krustens"
+]
 }
