@@ -40,7 +40,8 @@ impl PlayCount {
     }
 
     pub fn sort_by_song_count(&mut self) {
-        self.song_counts.sort_by_key(|song_count| Reverse(song_count.1))
+        self.song_counts
+            .sort_by_key(|song_count| Reverse(song_count.1))
     }
 
     pub fn total_plays(&self) -> u64 {
