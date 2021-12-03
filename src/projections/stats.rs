@@ -37,10 +37,9 @@ impl Stats {
                     }
                 };
 
-                if end_time.is_err() {
-                    return false;
-                } else {
-                    return end_time.unwrap().year().eq(&year);
+                match end_time {
+                    Ok(it) => it.year().eq(&year),
+                    _ => false
                 }
             })
             .cloned()

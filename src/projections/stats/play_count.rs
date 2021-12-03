@@ -65,7 +65,7 @@ impl PlayCount {
     }
 
     pub fn all_song_plays(&self) -> Vec<SongPlayCount> {
-        self.song_counts.iter().cloned().collect()
+        self.song_counts.to_vec()
     }
 
     pub fn max_song_play(&self) -> SongPlayCount {

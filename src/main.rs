@@ -94,12 +94,9 @@ fn main() {
 
     let matches = app.get_matches();
     let mode = matches.value_of("mode").unwrap_or("generate");
-    let year = match matches.value_of("year") {
-        Some(it) => Some(str::parse::<i32>(&it).unwrap()),
-        _ => None,
-    };
+    let year = matches.value_of("year").map(|it| str::parse::<i32>(it).unwrap());
     let split_monthly = match matches.value_of("split_monthly") {
-        Some(it) => str::parse::<bool>(&it).unwrap(),
+        Some(it) => str::parse::<bool>(it).unwrap(),
         _ => false,
     };
     let output_folder = matches.value_of("output").unwrap();
@@ -114,8 +111,8 @@ fn main() {
         create_dir(app_files.folder).unwrap();
     }
 
-    if !Path::new(Config::stats_folder(&output_folder).as_str()).exists() {
-        create_dir_all(Config::stats_folder(&output_folder).as_str()).unwrap()
+    if !Path::new(Config::stats_folder(output_folder).as_str()).exists() {
+        create_dir_all(Config::stats_folder(output_folder).as_str()).unwrap()
     }
 
     let existing_stream = match fs::read_to_string(app_files.streams_file()) {
@@ -126,15 +123,13 @@ fn main() {
         contents: &existing_stream,
     };
 
-    println!("{}", mode.clone());
-
     match mode {
         "process" => {
-            process_listens(app_files, &input_folder, Store::build(&stream_reader));
+            process_listens(app_files, input_folder, Store::build(&stream_reader));
         }
         _ => {
             generate_stats(
-                &output_folder,
+                output_folder,
                 stats_count,
                 Store::build(&stream_reader),
                 year,
@@ -161,7 +156,7 @@ fn generate_all_stats(stats_folder: &str, count: usize, store: Store) {
     let event_stream = store.get_events("listens".to_string()).unwrap();
 
     let stats = Stats::generate(event_stream.events.iter().collect());
-    write_stats(&stats_folder, &stats, count);
+    write_stats(stats_folder, &stats, count);
 }
 
 fn generate_stats_for_single_year(
@@ -191,23 +186,23 @@ fn generate_stats_for_single_year(
         }
     } else {
         let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
-        write_stats(&stats_folder, &stats, count);
+        write_stats(stats_folder, &stats, count);
     }
 }
 
 fn write_stats(stats_folder: &str, stats: &Stats, count: usize) {
     FileWriter::yaml_writer(Config::general_stats_file(stats_folder))
-            .write(&stats.general_stats(count))
-            .unwrap();
-        FileWriter::from(Config::complete_stats_file(stats_folder))
-            .write(stats)
-            .unwrap();
-        FileWriter::from(Config::top_50_stats_file(stats_folder))
-            .write(&stats.top(50))
-            .unwrap();
-        FileWriter::from(Config::top_100_stats_file(stats_folder))
-            .write(&stats.top(100))
-            .unwrap();
+        .write(&stats.general_stats(count))
+        .unwrap();
+    FileWriter::from(Config::complete_stats_file(stats_folder))
+        .write(stats)
+        .unwrap();
+    FileWriter::from(Config::top_50_stats_file(stats_folder))
+        .write(&stats.top(50))
+        .unwrap();
+    FileWriter::from(Config::top_100_stats_file(stats_folder))
+        .write(&stats.top(100))
+        .unwrap();
 }
 
 fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
@@ -220,7 +215,7 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
     };
     let mut repository = Repository::build(1500, &snapshot_reader);
     let streaming_files =
-        fs::read_dir(&input_folder).expect(format!("Could not read {}", &input_folder).as_str());
+        fs::read_dir(&input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 
     for entry in streaming_files.into_iter() {
         let path = entry.unwrap().path().clone();
@@ -232,7 +227,10 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
         let contents = fs::read_to_string(&path.display().to_string()).unwrap();
         let listens: Vec<TrackPlay> = match serde_json::from_str(&contents) {
             Ok(it) => it,
-            _ => continue,
+            _ => {
+                println!("could not parse {}", path.display().to_string());
+                continue
+            },
         };
         for listen in listens.iter() {
             let command = AddSpotifyListen {
