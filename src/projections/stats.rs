@@ -28,7 +28,7 @@ fn parse_end_time(end_time: &str) -> ParseResult<NaiveDateTime> {
 impl Stats {
     pub fn generate_for_year(events: Vec<&Event>, year: i32) -> Self {
         let matching_events = events
-            .into_iter()
+            .iter()
             .filter(|event| {
                 let end_time = match &event.data {
                     EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
@@ -43,6 +43,29 @@ impl Stats {
                     return end_time.unwrap().year().eq(&year);
                 }
             })
+            .cloned()
+            .collect();
+
+        Self::generate(matching_events)
+    }
+
+    pub fn generate_month_year(events: Vec<&Event>, year: i32, month: u32) -> Self {
+        let matching_events: Vec<&Event> = events
+            .iter()
+            .filter(|event| {
+                let end_time = match &event.data {
+                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayIgnored(ignored) => {
+                        parse_end_time(ignored.end_time.as_str())
+                    }
+                };
+
+                match end_time {
+                    Ok(it) => it.year() == year && it.month() == month,
+                    _ => false,
+                }
+            })
+            .cloned()
             .collect();
 
         Self::generate(matching_events)

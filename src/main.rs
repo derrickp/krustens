@@ -73,6 +73,18 @@ fn main() {
                 .help("year to generate stats for"),
         )
         .arg(
+            Arg::with_name("split_monthly")
+                .long("split_monthly")
+                .short("s")
+                .takes_value(true)
+                .validator(|include| match str::parse::<bool>(&include) {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e.to_string()),
+                })
+                .help("split year stats down by months")
+                .default_value("false"),
+        )
+        .arg(
             Arg::with_name("mode")
                 .long("mode")
                 .short("m")
@@ -85,6 +97,10 @@ fn main() {
     let year = match matches.value_of("year") {
         Some(it) => Some(str::parse::<i32>(&it).unwrap()),
         _ => None,
+    };
+    let split_monthly = match matches.value_of("split_monthly") {
+        Some(it) => str::parse::<bool>(&it).unwrap(),
+        _ => false,
     };
     let output_folder = matches.value_of("output").unwrap();
     let input_folder = matches.value_of("input").unwrap();
@@ -122,30 +138,76 @@ fn main() {
                 stats_count,
                 Store::build(&stream_reader),
                 year,
+                split_monthly,
             );
         }
     }
 }
 
-fn generate_stats(stats_folder: &str, count: usize, store: Store, year: Option<i32>) {
-    let event_stream = store.get_events("listens".to_string()).unwrap();
-    let stats = match year {
-        Some(it) => Stats::generate_for_year(event_stream.events.iter().collect(), it),
-        _ => Stats::generate(event_stream.events.iter().collect()),
-    };
+fn generate_stats(
+    stats_folder: &str,
+    count: usize,
+    store: Store,
+    year: Option<i32>,
+    split_monthly: bool,
+) {
+    match year {
+        Some(it) => generate_stats_for_single_year(stats_folder, count, store, it, split_monthly),
+        _ => generate_all_stats(stats_folder, count, store),
+    }
+}
 
-    FileWriter::yaml_writer(Config::general_stats_file(&stats_folder))
-        .write(&stats.general_stats(count))
-        .unwrap();
-    FileWriter::from(Config::complete_stats_file(&stats_folder))
-        .write(&stats)
-        .unwrap();
-    FileWriter::from(Config::top_50_stats_file(&stats_folder))
-        .write(&stats.top(50))
-        .unwrap();
-    FileWriter::from(Config::top_100_stats_file(&stats_folder))
-        .write(&stats.top(100))
-        .unwrap();
+fn generate_all_stats(stats_folder: &str, count: usize, store: Store) {
+    let event_stream = store.get_events("listens".to_string()).unwrap();
+
+    let stats = Stats::generate(event_stream.events.iter().collect());
+    write_stats(&stats_folder, &stats, count);
+}
+
+fn generate_stats_for_single_year(
+    stats_folder: &str,
+    count: usize,
+    store: Store,
+    year: i32,
+    split_monthly: bool,
+) {
+    let event_stream = store.get_events("listens".to_string()).unwrap();
+
+    if split_monthly {
+        for month in 1..=12 {
+            let stats = Stats::generate_month_year(
+                event_stream.events.iter().collect(),
+                year,
+                month as u32,
+            );
+
+            let output_folder = format!("{}/{}_{}", &stats_folder, year, month).clone();
+
+            if !Path::new(Config::stats_folder(&output_folder).as_str()).exists() {
+                create_dir_all(Config::stats_folder(&output_folder).as_str()).unwrap()
+            }
+
+            write_stats(&stats_folder, &stats, count);
+        }
+    } else {
+        let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
+        write_stats(&stats_folder, &stats, count);
+    }
+}
+
+fn write_stats(stats_folder: &str, stats: &Stats, count: usize) {
+    FileWriter::yaml_writer(Config::general_stats_file(stats_folder))
+            .write(&stats.general_stats(count))
+            .unwrap();
+        FileWriter::from(Config::complete_stats_file(stats_folder))
+            .write(stats)
+            .unwrap();
+        FileWriter::from(Config::top_50_stats_file(stats_folder))
+            .write(&stats.top(50))
+            .unwrap();
+        FileWriter::from(Config::top_100_stats_file(stats_folder))
+            .write(&stats.top(100))
+            .unwrap();
 }
 
 fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
