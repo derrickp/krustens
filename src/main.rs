@@ -187,7 +187,7 @@ fn generate_stats_for_single_year(
                 create_dir_all(Config::stats_folder(&output_folder).as_str()).unwrap()
             }
 
-            write_stats(&stats_folder, &stats, count);
+            write_stats(&output_folder, &stats, count);
         }
     } else {
         let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
