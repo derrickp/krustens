@@ -1,4 +1,5 @@
 pub mod day_stat;
+pub mod folder;
 pub mod general;
 pub mod play_count;
 pub mod skipped_track;
