@@ -13,6 +13,7 @@ use std::{
 };
 
 use app_files::AppFiles;
+use chrono::Weekday;
 use clap::{App, Arg};
 use config::Config;
 use spotify::track_play::TrackPlay;
@@ -20,7 +21,10 @@ use spotify::track_play::TrackPlay;
 use crate::{
     commands::add_spotify_listen::AddSpotifyListen,
     persistence::{file_writer::FileWriter, json_reader::JsonReader, writer::Writer},
-    projections::{repository::Repository, stats::Stats},
+    projections::{
+        repository::Repository,
+        stats::{day_stat::DayStat, Stats},
+    },
     stores::store::Store,
 };
 
@@ -94,7 +98,9 @@ fn main() {
 
     let matches = app.get_matches();
     let mode = matches.value_of("mode").unwrap_or("generate");
-    let year = matches.value_of("year").map(|it| str::parse::<i32>(it).unwrap());
+    let year = matches
+        .value_of("year")
+        .map(|it| str::parse::<i32>(it).unwrap());
     let split_monthly = match matches.value_of("split_monthly") {
         Some(it) => str::parse::<bool>(it).unwrap(),
         _ => false,
@@ -178,14 +184,67 @@ fn generate_stats_for_single_year(
 
             let output_folder = format!("{}/{}_{}", &stats_folder, year, month).clone();
 
+            let weekdays = vec![
+                Weekday::Sun,
+                Weekday::Mon,
+                Weekday::Tue,
+                Weekday::Wed,
+                Weekday::Thu,
+                Weekday::Fri,
+                Weekday::Sat,
+            ];
+
+            let day_stats: Vec<DayStat> = weekdays
+                .iter()
+                .map(|day| {
+                    Stats::generate_day_stat(
+                        event_stream.events.iter().collect(),
+                        year,
+                        month,
+                        *day,
+                        5,
+                    )
+                })
+                .collect();
+
             if !Path::new(Config::stats_folder(&output_folder).as_str()).exists() {
                 create_dir_all(Config::stats_folder(&output_folder).as_str()).unwrap()
             }
+
+            FileWriter::yaml_writer(Config::stats_file_name(&output_folder, "daily.yaml"))
+                .write(&day_stats)
+                .unwrap();
 
             write_stats(&output_folder, &stats, count);
         }
     } else {
         let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
+
+        let weekdays = vec![
+            Weekday::Sun,
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+            Weekday::Sat,
+        ];
+
+        let day_stats: Vec<DayStat> = weekdays
+            .iter()
+            .map(|day| {
+                Stats::generate_day_stat_all_year(
+                    event_stream.events.iter().collect(),
+                    year,
+                    *day,
+                    10,
+                )
+            })
+            .collect();
+        FileWriter::yaml_writer(Config::stats_file_name(&stats_folder, "daily.yaml"))
+            .write(&day_stats)
+            .unwrap();
+
         write_stats(stats_folder, &stats, count);
     }
 }
@@ -229,8 +288,8 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
             Ok(it) => it,
             _ => {
                 println!("could not parse {}", path.display().to_string());
-                continue
-            },
+                continue;
+            }
         };
         for listen in listens.iter() {
             let command = AddSpotifyListen {
