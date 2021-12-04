@@ -1,3 +1,5 @@
+use std::{fs::create_dir_all, path::Path};
+
 pub struct Folder {
     pub output_folder: String,
     pub year: Option<i32>,
@@ -42,6 +44,12 @@ impl Folder {
             self.year_folder(self.year.unwrap())
         } else {
             format!("{}", self.output_folder)
+        }
+    }
+
+    pub fn create_if_necessary(&self) {
+        if !Path::new(&self.folder_name()).exists() {
+            create_dir_all(&self.folder_name()).unwrap()
         }
     }
 

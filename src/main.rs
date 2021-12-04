@@ -7,7 +7,7 @@ mod spotify;
 mod stores;
 
 use std::{
-    fs::{self, create_dir, create_dir_all},
+    fs::{self, create_dir},
     path::Path,
 };
 
@@ -141,21 +141,21 @@ fn main() {
 }
 
 fn generate_stats(
-    stats_folder: &str,
+    output_folder: &str,
     count: usize,
     store: Store,
     year: Option<i32>,
     split_monthly: bool,
 ) {
     match year {
-        Some(it) => generate_stats_for_single_year(stats_folder, count, store, it, split_monthly),
-        _ => generate_all_stats(stats_folder, count, store),
+        Some(it) => generate_stats_for_single_year(output_folder, count, store, it, split_monthly),
+        _ => generate_all_stats(output_folder, count, store),
     }
 }
 
-fn generate_all_stats(stats_folder: &str, count: usize, store: Store) {
+fn generate_all_stats(output_folder: &str, count: usize, store: Store) {
     let folder = Folder {
-        output_folder: stats_folder.to_string(),
+        output_folder: output_folder.to_string(),
         year: None,
         month: None,
     };
@@ -166,7 +166,7 @@ fn generate_all_stats(stats_folder: &str, count: usize, store: Store) {
 }
 
 fn generate_stats_for_single_year(
-    stats_folder: &str,
+    output_folder: &str,
     count: usize,
     store: Store,
     year: i32,
@@ -183,7 +183,7 @@ fn generate_stats_for_single_year(
             );
 
             let folder = Folder {
-                output_folder: stats_folder.to_string(),
+                output_folder: output_folder.to_string(),
                 year: Some(year),
                 month: Some(month),
             };
@@ -211,10 +211,7 @@ fn generate_stats_for_single_year(
                 })
                 .collect();
 
-            if !Path::new(&folder.folder_name()).exists() {
-                create_dir_all(&folder.folder_name()).unwrap()
-            }
-
+            folder.create_if_necessary();
             FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
                 .write(&day_stats)
                 .unwrap();
@@ -243,15 +240,12 @@ fn generate_stats_for_single_year(
         .collect();
 
     let folder = Folder {
-        output_folder: stats_folder.to_string(),
+        output_folder: output_folder.to_string(),
         year: Some(year),
         month: None,
     };
 
-    if !Path::new(&folder.folder_name()).exists() {
-        create_dir_all(&folder.folder_name()).unwrap()
-    }
-
+    folder.create_if_necessary();
     FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
         .write(&day_stats)
         .unwrap();
@@ -260,9 +254,7 @@ fn generate_stats_for_single_year(
 }
 
 fn write_stats(stats_folder: &Folder, stats: &Stats, count: usize) {
-    if !Path::new(&stats_folder.folder_name()).exists() {
-        create_dir_all(&stats_folder.folder_name()).unwrap()
-    }
+    stats_folder.create_if_necessary();
 
     FileWriter::yaml_writer(stats_folder.file_name(&FileName::General))
         .write(&stats.general_stats(count))
