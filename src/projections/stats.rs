@@ -6,13 +6,13 @@ pub mod song_play_count;
 
 use std::{cmp::Reverse, collections::HashMap};
 
-use chrono::{Datelike, NaiveDateTime, ParseResult};
+use chrono::{Datelike, NaiveDateTime, ParseResult, Weekday};
 use serde::Serialize;
 
 use crate::events::{event::Event, event_data::EventData};
 
 use self::{
-    general::GeneralStats, play_count::PlayCount, skipped_track::SkippedTrack,
+    day_stat::DayStat, general::GeneralStats, play_count::PlayCount, skipped_track::SkippedTrack,
     song_play_count::SongPlayCount,
 };
 
@@ -40,7 +40,7 @@ impl Stats {
 
                 match end_time {
                     Ok(it) => it.year().eq(&year),
-                    _ => false
+                    _ => false,
                 }
             })
             .cloned()
@@ -94,6 +94,77 @@ impl Stats {
         }
 
         stats
+    }
+
+    pub fn generate_day_stat_all_year(
+        events: Vec<&Event>,
+        year: i32,
+        day: Weekday,
+        count: usize,
+    ) -> DayStat {
+        let matching_events = events
+            .iter()
+            .filter(|event| {
+                let end_time = match &event.data {
+                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayIgnored(ignored) => {
+                        parse_end_time(ignored.end_time.as_str())
+                    }
+                };
+
+                match end_time {
+                    Ok(it) => it.year() == year && it.weekday() == day,
+                    _ => false,
+                }
+            })
+            .cloned()
+            .collect();
+
+        let stats = Self::generate(matching_events);
+
+        let mut plays = stats.top_unique_artists(count);
+        plays.sort_by_key(|play| Reverse(play.total_plays()));
+
+        DayStat {
+            plays,
+            weekday: day,
+        }
+    }
+
+    pub fn generate_day_stat(
+        events: Vec<&Event>,
+        year: i32,
+        month: u32,
+        day: Weekday,
+        count: usize,
+    ) -> DayStat {
+        let matching_events = events
+            .iter()
+            .filter(|event| {
+                let end_time = match &event.data {
+                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayIgnored(ignored) => {
+                        parse_end_time(ignored.end_time.as_str())
+                    }
+                };
+
+                match end_time {
+                    Ok(it) => it.year() == year && it.month() == month && it.weekday() == day,
+                    _ => false,
+                }
+            })
+            .cloned()
+            .collect();
+
+        let stats = Self::generate(matching_events);
+
+        let mut plays = stats.top_unique_artists(count);
+        plays.sort_by_key(|play| Reverse(play.total_plays()));
+
+        DayStat {
+            plays,
+            weekday: day,
+        }
     }
 
     pub fn general_stats(&self, count: usize) -> GeneralStats {
