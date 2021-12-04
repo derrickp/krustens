@@ -20,4 +20,4 @@ Once the events have been generated, you can generate statistics by just running
 ```bash
 cargo run
 ```
-The `stats` folder will be generated and it will then contains a number of stats files. Right now the only real values that can be changed is the year to generate statistics for (e.g. 2020 or 2021) and how many _Top_ songs or artists to include in the general stats.
+The `stats` folder will be generated and it will then contains a number of stats files. Right now the only real values that can be changed is the year to generate statistics for (e.g. 2020 or 2021) and how many _Top_ songs or artists to include in the general stats. For a full list of options run `cargo run -- -h`.
