@@ -1,6 +1,5 @@
 mod app_files;
 mod commands;
-mod config;
 mod events;
 mod persistence;
 mod projections;
@@ -15,7 +14,7 @@ use std::{
 use app_files::AppFiles;
 use chrono::Weekday;
 use clap::{App, Arg};
-use config::Config;
+use projections::stats::folder::{FileName, Folder};
 use spotify::track_play::TrackPlay;
 
 use crate::{
@@ -117,10 +116,6 @@ fn main() {
         create_dir(app_files.folder).unwrap();
     }
 
-    if !Path::new(Config::stats_folder(output_folder).as_str()).exists() {
-        create_dir_all(Config::stats_folder(output_folder).as_str()).unwrap()
-    }
-
     let existing_stream = match fs::read_to_string(app_files.streams_file()) {
         Ok(it) => it,
         _ => "".to_string(),
@@ -159,10 +154,15 @@ fn generate_stats(
 }
 
 fn generate_all_stats(stats_folder: &str, count: usize, store: Store) {
+    let folder = Folder {
+        output_folder: stats_folder.to_string(),
+        year: None,
+        month: None,
+    };
     let event_stream = store.get_events("listens".to_string()).unwrap();
 
     let stats = Stats::generate(event_stream.events.iter().collect());
-    write_stats(stats_folder, &stats, count);
+    write_stats(&folder, &stats, count);
 }
 
 fn generate_stats_for_single_year(
@@ -182,7 +182,11 @@ fn generate_stats_for_single_year(
                 month as u32,
             );
 
-            let output_folder = format!("{}/{}_{}", &stats_folder, year, month).clone();
+            let folder = Folder {
+                output_folder: stats_folder.to_string(),
+                year: Some(year),
+                month: Some(month),
+            };
 
             let weekdays = vec![
                 Weekday::Sun,
@@ -207,15 +211,15 @@ fn generate_stats_for_single_year(
                 })
                 .collect();
 
-            if !Path::new(Config::stats_folder(&output_folder).as_str()).exists() {
-                create_dir_all(Config::stats_folder(&output_folder).as_str()).unwrap()
+            if !Path::new(&folder.folder_name()).exists() {
+                create_dir_all(&folder.folder_name()).unwrap()
             }
 
-            FileWriter::yaml_writer(Config::stats_file_name(&output_folder, "daily.yaml"))
+            FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
                 .write(&day_stats)
                 .unwrap();
 
-            write_stats(&output_folder, &stats, count);
+            write_stats(&folder, &stats, count);
         }
     }
 
@@ -237,24 +241,39 @@ fn generate_stats_for_single_year(
             Stats::generate_day_stat_all_year(event_stream.events.iter().collect(), year, *day, 10)
         })
         .collect();
-    FileWriter::yaml_writer(Config::stats_file_name(&stats_folder, "daily.yaml"))
+
+    let folder = Folder {
+        output_folder: stats_folder.to_string(),
+        year: Some(year),
+        month: None,
+    };
+
+    if !Path::new(&folder.folder_name()).exists() {
+        create_dir_all(&folder.folder_name()).unwrap()
+    }
+
+    FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
         .write(&day_stats)
         .unwrap();
 
-    write_stats(stats_folder, &stats, count);
+    write_stats(&folder, &stats, count);
 }
 
-fn write_stats(stats_folder: &str, stats: &Stats, count: usize) {
-    FileWriter::yaml_writer(Config::general_stats_file(stats_folder))
+fn write_stats(stats_folder: &Folder, stats: &Stats, count: usize) {
+    if !Path::new(&stats_folder.folder_name()).exists() {
+        create_dir_all(&stats_folder.folder_name()).unwrap()
+    }
+
+    FileWriter::yaml_writer(stats_folder.file_name(&FileName::General))
         .write(&stats.general_stats(count))
         .unwrap();
-    FileWriter::from(Config::complete_stats_file(stats_folder))
+    FileWriter::from(stats_folder.file_name(&FileName::Complete))
         .write(stats)
         .unwrap();
-    FileWriter::from(Config::top_50_stats_file(stats_folder))
+    FileWriter::from(stats_folder.file_name(&FileName::Top50))
         .write(&stats.top(50))
         .unwrap();
-    FileWriter::from(Config::top_100_stats_file(stats_folder))
+    FileWriter::from(stats_folder.file_name(&FileName::Top100))
         .write(&stats.top(100))
         .unwrap();
 }
