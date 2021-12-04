@@ -217,36 +217,31 @@ fn generate_stats_for_single_year(
 
             write_stats(&output_folder, &stats, count);
         }
-    } else {
-        let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
-
-        let weekdays = vec![
-            Weekday::Sun,
-            Weekday::Mon,
-            Weekday::Tue,
-            Weekday::Wed,
-            Weekday::Thu,
-            Weekday::Fri,
-            Weekday::Sat,
-        ];
-
-        let day_stats: Vec<DayStat> = weekdays
-            .iter()
-            .map(|day| {
-                Stats::generate_day_stat_all_year(
-                    event_stream.events.iter().collect(),
-                    year,
-                    *day,
-                    10,
-                )
-            })
-            .collect();
-        FileWriter::yaml_writer(Config::stats_file_name(&stats_folder, "daily.yaml"))
-            .write(&day_stats)
-            .unwrap();
-
-        write_stats(stats_folder, &stats, count);
     }
+
+    let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
+
+    let weekdays = vec![
+        Weekday::Sun,
+        Weekday::Mon,
+        Weekday::Tue,
+        Weekday::Wed,
+        Weekday::Thu,
+        Weekday::Fri,
+        Weekday::Sat,
+    ];
+
+    let day_stats: Vec<DayStat> = weekdays
+        .iter()
+        .map(|day| {
+            Stats::generate_day_stat_all_year(event_stream.events.iter().collect(), year, *day, 10)
+        })
+        .collect();
+    FileWriter::yaml_writer(Config::stats_file_name(&stats_folder, "daily.yaml"))
+        .write(&day_stats)
+        .unwrap();
+
+    write_stats(stats_folder, &stats, count);
 }
 
 fn write_stats(stats_folder: &str, stats: &Stats, count: usize) {
