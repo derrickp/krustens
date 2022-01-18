@@ -35,26 +35,26 @@ fn main() {
         .author("derrickp")
         .about("Generate stats from spotify history")
         .arg(
-            Arg::with_name("input")
+            Arg::new("input")
                 .long("input")
-                .short("i")
+                .short('i')
                 .required(false)
                 .takes_value(true)
                 .help("folder that contains the spotify streaming history")
                 .default_value("./data/spotify_play_history"),
         )
         .arg(
-            Arg::with_name("output")
-                .short("o")
+            Arg::new("output")
+                .short('o')
                 .long("output")
                 .takes_value(true)
                 .help("Folder to place the generated stats in")
                 .default_value("./output"),
         )
         .arg(
-            Arg::with_name("count")
+            Arg::new("count")
                 .long("count")
-                .short("c")
+                .short('c')
                 .takes_value(true)
                 .validator(|count| match str::parse::<usize>(&count) {
                     Ok(_) => Ok(()),
@@ -64,9 +64,9 @@ fn main() {
                 .default_value("25"),
         )
         .arg(
-            Arg::with_name("year")
+            Arg::new("year")
                 .long("year")
-                .short("y")
+                .short('y')
                 .required(false)
                 .takes_value(true)
                 .validator(|year| match str::parse::<i32>(&year) {
@@ -76,9 +76,9 @@ fn main() {
                 .help("year to generate stats for"),
         )
         .arg(
-            Arg::with_name("split_monthly")
+            Arg::new("split_monthly")
                 .long("split_monthly")
-                .short("s")
+                .short('s')
                 .takes_value(true)
                 .validator(|include| match str::parse::<bool>(&include) {
                     Ok(_) => Ok(()),
@@ -88,9 +88,9 @@ fn main() {
                 .default_value("false"),
         )
         .arg(
-            Arg::with_name("mode")
+            Arg::new("mode")
                 .long("mode")
-                .short("m")
+                .short('m')
                 .takes_value(true)
                 .possible_values(&["process", "generate"]),
         );
