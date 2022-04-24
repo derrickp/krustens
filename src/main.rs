@@ -13,7 +13,7 @@ use std::{
 
 use app_files::AppFiles;
 use chrono::Weekday;
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use projections::stats::folder::{FileName, Folder};
 use spotify::track_play::TrackPlay;
 
@@ -30,7 +30,7 @@ use crate::{
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
 
 fn main() {
-    let app = App::new("krustens")
+    let app = Command::new("krustens")
         .version("0.1")
         .author("derrickp")
         .about("Generate stats from spotify history")
@@ -56,7 +56,7 @@ fn main() {
                 .long("count")
                 .short('c')
                 .takes_value(true)
-                .validator(|count| match str::parse::<usize>(&count) {
+                .validator(|count| match str::parse::<usize>(count) {
                     Ok(_) => Ok(()),
                     Err(e) => Err(e.to_string()),
                 })
@@ -69,7 +69,7 @@ fn main() {
                 .short('y')
                 .required(false)
                 .takes_value(true)
-                .validator(|year| match str::parse::<i32>(&year) {
+                .validator(|year| match str::parse::<i32>(year) {
                     Ok(_) => Ok(()),
                     Err(e) => Err(e.to_string()),
                 })
@@ -80,7 +80,7 @@ fn main() {
                 .long("split_monthly")
                 .short('s')
                 .takes_value(true)
-                .validator(|include| match str::parse::<bool>(&include) {
+                .validator(|include| match str::parse::<bool>(include) {
                     Ok(_) => Ok(()),
                     Err(e) => Err(e.to_string()),
                 })
@@ -282,18 +282,18 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
     let streaming_files =
         fs::read_dir(&input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 
-    for entry in streaming_files.into_iter() {
+    for entry in streaming_files {
         let path = entry.unwrap().path().clone();
 
-        if !path.display().to_string().ends_with(".json") {
+        if !format!("{}", &path.display()).ends_with(".json") {
             continue;
         }
 
-        let contents = fs::read_to_string(&path.display().to_string()).unwrap();
+        let contents = fs::read_to_string(format!("{}", &path.display())).unwrap();
         let listens: Vec<TrackPlay> = match serde_json::from_str(&contents) {
             Ok(it) => it,
             _ => {
-                println!("could not parse {}", path.display().to_string());
+                println!("could not parse {}", path.display());
                 continue;
             }
         };
@@ -317,7 +317,7 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
             }
         }
 
-        println!("processed {}", path.display().to_string());
+        println!("processed {}", path.display());
     }
 
     repository.flush(&app_files.snapshot_writer());

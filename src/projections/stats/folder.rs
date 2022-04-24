@@ -16,12 +16,12 @@ pub enum FileName {
 
 impl ToString for FileName {
     fn to_string(&self) -> String {
-        match self {
-            &FileName::Complete => "complete.json".to_string(),
-            &FileName::Daily => "daily.yaml".to_string(),
-            &FileName::General => "general.yaml".to_string(),
-            &FileName::Top50 => "top_50.json".to_string(),
-            &FileName::Top100 => "top_100.json".to_string(),
+        match *self {
+            FileName::Complete => "complete.json".to_string(),
+            FileName::Daily => "daily.yaml".to_string(),
+            FileName::General => "general.yaml".to_string(),
+            FileName::Top50 => "top_50.json".to_string(),
+            FileName::Top100 => "top_100.json".to_string(),
         }
     }
 }
@@ -43,7 +43,7 @@ impl Folder {
         } else if self.year.is_some() {
             self.year_folder(self.year.unwrap())
         } else {
-            format!("{}", self.output_folder)
+            self.output_folder.to_string()
         }
     }
 

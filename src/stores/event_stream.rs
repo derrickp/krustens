@@ -1,15 +1,7 @@
 use crate::events::event::Event;
 
+#[derive(Default)]
 pub struct EventStream {
     pub events: Vec<Event>,
     pub version: u64,
-}
-
-impl Default for EventStream {
-    fn default() -> Self {
-        Self {
-            events: Vec::new(),
-            version: 0,
-        }
-    }
 }
