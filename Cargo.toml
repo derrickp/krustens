@@ -11,7 +11,7 @@ exclude = [
 readme = "README.md"
 homepage = "https://github.com/derrickp/krustens"
 keywords = ["music", "cli"]
-categories = ["command-line-utilities"]
+categories = ["command-line-utilities", "command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
