@@ -31,7 +31,7 @@ pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
 
 fn main() {
     let app = Command::new("krustens")
-        .version("0.1")
+        .version("1.0.1")
         .author("derrickp")
         .about("Generate stats from spotify history")
         .arg(
