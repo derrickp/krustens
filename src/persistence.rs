@@ -1,3 +1,4 @@
+pub mod errors;
 pub mod file_writer;
 pub mod json_reader;
 pub mod read_error;
