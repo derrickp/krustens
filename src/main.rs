@@ -14,17 +14,17 @@ use std::{
 use app_files::AppFiles;
 use chrono::Weekday;
 use clap::{Arg, Command};
-use projections::stats::folder::{FileName, Folder};
-use spotify::track_play::TrackPlay;
+use projections::stats::{FileName, Folder};
+use spotify::TrackPlay;
 
 use crate::{
-    commands::add_spotify_listen::AddSpotifyListen,
-    persistence::{file_writer::FileWriter, json_reader::JsonReader, writer::Writer},
+    commands::AddSpotifyListen,
+    persistence::{FileWriter, JsonReader, Writer},
     projections::{
-        repository::Repository,
-        stats::{day_stat::DayStat, Stats},
+        stats::{DayStat, Stats},
+        Repository,
     },
-    stores::store::Store,
+    stores::Store,
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute

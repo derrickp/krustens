@@ -1,7 +1,7 @@
 use crate::{
-    events::event_data::EventData,
-    persistence::{reader::Reader, writer::Writer},
-    stores::store::Store,
+    events::EventData,
+    persistence::{Reader, Writer},
+    stores::Store,
 };
 
 use super::{

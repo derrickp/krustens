@@ -1,10 +1,10 @@
 use crate::{
     events::{
-        event::Event, event_data::EventData, track_play_added::TrackPlayAdded,
-        track_skipped::TrackSkipped,
+        Event, EventData, TrackPlayAdded,
+        TrackSkipped,
     },
-    projections::has_listen::HasListen,
-    spotify::track_play::TrackPlay,
+    projections::HasListen,
+    spotify::TrackPlay,
 };
 
 pub struct AddSpotifyListen {

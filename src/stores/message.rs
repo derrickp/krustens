@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::events::event_data::EventData;
+use crate::events::EventData;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {

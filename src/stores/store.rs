@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    events::event::Event,
-    persistence::{reader::Reader, writer::Writer},
+    events::Event,
+    persistence::{Reader, Writer},
     stores::message::Message,
 };
 

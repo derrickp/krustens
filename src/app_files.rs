@@ -1,4 +1,4 @@
-use crate::persistence::file_writer::FileWriter;
+use crate::persistence::FileWriter;
 
 pub struct AppFiles {
     pub folder: &'static str,

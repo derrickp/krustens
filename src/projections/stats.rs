@@ -1,21 +1,23 @@
-pub mod day_stat;
-pub mod folder;
-pub mod general;
-pub mod play_count;
-pub mod skipped_track;
-pub mod song_play_count;
+mod day_stat;
+mod folder;
+mod general;
+mod play_count;
+mod skipped_track;
+mod song_play_count;
+
+pub use day_stat::DayStat;
+pub use folder::{FileName, Folder};
+pub use general::GeneralStats;
+pub use play_count::{PlayCount, TimePlayed};
+pub use skipped_track::SkippedTrack;
+pub use song_play_count::SongPlayCount;
 
 use std::{cmp::Reverse, collections::HashMap};
 
 use chrono::{Datelike, NaiveDateTime, ParseResult, Weekday};
 use serde::Serialize;
 
-use crate::events::{event::Event, event_data::EventData};
-
-use self::{
-    day_stat::DayStat, general::GeneralStats, play_count::PlayCount, skipped_track::SkippedTrack,
-    song_play_count::SongPlayCount,
-};
+use crate::events::{Event, EventData};
 
 #[derive(Debug, Serialize, Default)]
 pub struct Stats {
