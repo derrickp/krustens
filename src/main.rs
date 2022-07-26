@@ -29,7 +29,12 @@ use crate::{
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), std::io::Error> {
+    let db_url = crate::persistence::bootstrap().await.unwrap();
+    let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
+    sqlx::migrate!().run(&pool).await.unwrap();
+
     let app = Command::new("krustens")
         .version("1.0.1")
         .author("derrickp")
@@ -127,6 +132,7 @@ fn main() {
     match mode {
         "process" => {
             process_listens(app_files, input_folder, Store::build(&stream_reader));
+            Ok(())
         }
         _ => {
             generate_stats(
@@ -136,6 +142,7 @@ fn main() {
                 year,
                 split_monthly,
             );
+            Ok(())
         }
     }
 }
