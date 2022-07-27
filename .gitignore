@@ -4,3 +4,6 @@
 /output
 /build
 *.zip
+*.db
+*.db-shm
+*.db-wal
