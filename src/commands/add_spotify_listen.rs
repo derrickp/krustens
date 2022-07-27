@@ -1,8 +1,5 @@
 use crate::{
-    events::{
-        Event, EventData, TrackPlayAdded,
-        TrackSkipped,
-    },
+    events::{Event, EventData, TrackPlayAdded, TrackSkipped},
     projections::HasListen,
     spotify::TrackPlay,
 };
