@@ -3,6 +3,7 @@ use std::{
     io::{BufWriter, Write},
 };
 
+use async_trait::async_trait;
 use serde::Serialize;
 
 use super::{write_error::WriteError, writer::Writer};
@@ -35,8 +36,9 @@ impl FileWriter {
     }
 }
 
-impl<T: Serialize> Writer<T> for FileWriter {
-    fn write(&self, value: &T) -> Result<bool, WriteError> {
+#[async_trait]
+impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
+    async fn write(&self, value: &T) -> Result<bool, WriteError> {
         let file = match File::create(self.path.clone()) {
             Ok(it) => it,
             Err(e) => {

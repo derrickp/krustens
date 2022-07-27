@@ -1,4 +1,3 @@
-mod app_files;
 mod commands;
 mod events;
 mod persistence;
@@ -6,28 +5,27 @@ mod projections;
 mod spotify;
 mod stores;
 
-use std::{
-    fs::{self, create_dir},
-    path::Path,
-};
+use std::fs;
 
-use app_files::AppFiles;
 use chrono::Weekday;
 use clap::{Arg, Command};
 use projections::stats::{FileName, Folder};
 use spotify::TrackPlay;
+use sqlx::{Pool, Sqlite};
+use stores::SqliteStore;
 
 use crate::{
     commands::AddSpotifyListen,
-    persistence::{FileWriter, JsonReader, Writer},
+    persistence::{FileWriter, Writer},
     projections::{
+        listen_tracker_repo,
         stats::{DayStat, Stats},
-        Repository,
+        ProjectionRepository,
     },
-    stores::Store,
+    stores::EventStore,
 };
 
-pub const MIN_LISTEN_LENGTH: u64 = 1000 * 60; // 1000ms in s, 60s in minute
+pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10; // 1000ms in s, 60s in minute
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -113,73 +111,60 @@ async fn main() -> Result<(), std::io::Error> {
     let input_folder = matches.value_of("input").unwrap();
     let stats_count = str::parse::<usize>(matches.value_of("count").unwrap()).unwrap();
 
-    let app_files = AppFiles {
-        folder: "./app_data",
-    };
-
-    if !Path::new(app_files.folder).exists() {
-        create_dir(app_files.folder).unwrap();
-    }
-
-    let existing_stream = match fs::read_to_string(app_files.streams_file()) {
-        Ok(it) => it,
-        _ => "".to_string(),
-    };
-    let stream_reader = JsonReader {
-        contents: &existing_stream,
-    };
-
     match mode {
         "process" => {
-            process_listens(app_files, input_folder, Store::build(&stream_reader));
+            process_listens(input_folder, SqliteStore::build(pool.clone()), &pool).await;
             Ok(())
         }
         _ => {
             generate_stats(
                 output_folder,
                 stats_count,
-                Store::build(&stream_reader),
+                SqliteStore::build(pool.clone()),
                 year,
                 split_monthly,
-            );
+            )
+            .await;
             Ok(())
         }
     }
 }
 
-fn generate_stats(
+async fn generate_stats(
     output_folder: &str,
     count: usize,
-    store: Store,
+    store: SqliteStore,
     year: Option<i32>,
     split_monthly: bool,
 ) {
     match year {
-        Some(it) => generate_stats_for_single_year(output_folder, count, store, it, split_monthly),
-        _ => generate_all_stats(output_folder, count, store),
+        Some(it) => {
+            generate_stats_for_single_year(output_folder, count, store, it, split_monthly).await
+        }
+        _ => generate_all_stats(output_folder, count, store).await,
     }
 }
 
-fn generate_all_stats(output_folder: &str, count: usize, store: Store) {
+async fn generate_all_stats(output_folder: &str, count: usize, store: SqliteStore) {
     let folder = Folder {
         output_folder: output_folder.to_string(),
         year: None,
         month: None,
     };
-    let event_stream = store.get_events("listens".to_string()).unwrap();
+    let event_stream = store.get_events("listens".to_string()).await.unwrap();
 
     let stats = Stats::generate(event_stream.events.iter().collect());
-    write_stats(&folder, &stats, count);
+    write_stats(&folder, &stats, count).await;
 }
 
-fn generate_stats_for_single_year(
+async fn generate_stats_for_single_year(
     output_folder: &str,
     count: usize,
-    store: Store,
+    store: SqliteStore,
     year: i32,
     split_monthly: bool,
 ) {
-    let event_stream = store.get_events("listens".to_string()).unwrap();
+    let event_stream = store.get_events("listens".to_string()).await.unwrap();
 
     if split_monthly {
         for month in 1..=12 {
@@ -221,9 +206,10 @@ fn generate_stats_for_single_year(
             folder.create_if_necessary();
             FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
                 .write(&day_stats)
+                .await
                 .unwrap();
 
-            write_stats(&folder, &stats, count);
+            write_stats(&folder, &stats, count).await;
         }
     }
 
@@ -255,37 +241,35 @@ fn generate_stats_for_single_year(
     folder.create_if_necessary();
     FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
         .write(&day_stats)
+        .await
         .unwrap();
 
-    write_stats(&folder, &stats, count);
+    write_stats(&folder, &stats, count).await;
 }
 
-fn write_stats(stats_folder: &Folder, stats: &Stats, count: usize) {
+async fn write_stats(stats_folder: &Folder, stats: &Stats, count: usize) {
     stats_folder.create_if_necessary();
 
     FileWriter::yaml_writer(stats_folder.file_name(&FileName::General))
         .write(&stats.general_stats(count))
+        .await
         .unwrap();
     FileWriter::from(stats_folder.file_name(&FileName::Complete))
         .write(stats)
+        .await
         .unwrap();
     FileWriter::from(stats_folder.file_name(&FileName::Top50))
         .write(&stats.top(50))
+        .await
         .unwrap();
     FileWriter::from(stats_folder.file_name(&FileName::Top100))
         .write(&stats.top(100))
+        .await
         .unwrap();
 }
 
-fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
-    let snapshot_contents = match fs::read_to_string(app_files.snapshot_file()) {
-        Ok(it) => it,
-        _ => "".to_string(),
-    };
-    let snapshot_reader = JsonReader {
-        contents: &snapshot_contents,
-    };
-    let mut repository = Repository::build(1500, &snapshot_reader);
+async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sqlite>) {
+    let mut repository = listen_tracker_repo(1500, pool).await;
     let streaming_files =
         fs::read_dir(&input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 
@@ -309,16 +293,14 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
                 listen: listen.clone(),
                 min_listen_length: MIN_LISTEN_LENGTH,
             };
-            let tracker = repository.get_tracker(&store, &app_files.snapshot_writer());
-            let handle_result = command.handle(tracker);
+            let tracker = repository.get(&store).await;
+            let handle_result = command.handle(&tracker);
 
             if let Some(event) = handle_result {
-                if let Err(err) = store.add_event(
-                    "listens".to_string(),
-                    &event,
-                    event.version,
-                    &app_files.streams_writer(),
-                ) {
+                if let Err(err) = store
+                    .add_event("listens".to_string(), &event, event.version)
+                    .await
+                {
                     println!("{:?}", err);
                 }
             }
@@ -327,6 +309,6 @@ fn process_listens(app_files: AppFiles, input_folder: &str, mut store: Store) {
         println!("processed {}", path.display());
     }
 
-    repository.flush(&app_files.snapshot_writer());
-    store.flush(&app_files.streams_writer());
+    let _ = repository.get(&store).await;
+    repository.flush().await;
 }

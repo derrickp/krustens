@@ -1,7 +1,8 @@
-use serde::Deserialize;
+use async_trait::async_trait;
 
 use super::read_error::ReadError;
 
-pub trait Reader<'a, T: Deserialize<'a>> {
-    fn read(&self) -> Result<T, ReadError>;
+#[async_trait]
+pub trait Reader<T> {
+    async fn read(&self) -> Result<T, ReadError>;
 }

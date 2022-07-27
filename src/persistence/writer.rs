@@ -1,7 +1,9 @@
+use async_trait::async_trait;
 use serde::Serialize;
 
 use super::write_error::WriteError;
 
+#[async_trait]
 pub trait Writer<T: Serialize> {
-    fn write(&self, value: &T) -> Result<bool, WriteError>;
+    async fn write(&self, value: &T) -> Result<bool, WriteError>;
 }

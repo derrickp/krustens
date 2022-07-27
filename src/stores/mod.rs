@@ -1,11 +1,11 @@
 mod add_event_error;
+mod event_store;
 mod event_stream;
 mod get_events_error;
-mod message;
-mod store;
+mod sqlite_store;
 
 pub use add_event_error::AddEventError;
+pub use event_store::EventStore;
 pub use event_stream::EventStream;
 pub use get_events_error::GetEventsError;
-pub use message::Message;
-pub use store::{MessageCollection, Store};
+pub use sqlite_store::SqliteStore;
