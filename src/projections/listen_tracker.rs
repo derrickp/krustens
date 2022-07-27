@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ListenTracker {
     pub listens: HashSet<String>,
-    pub version: u64,
+    pub version: u32,
 }
 
 impl HasListen for ListenTracker {
@@ -16,7 +16,7 @@ impl HasListen for ListenTracker {
         self.listens.contains(&id)
     }
 
-    fn version(&self) -> u64 {
+    fn version(&self) -> u32 {
         self.version
     }
 }
