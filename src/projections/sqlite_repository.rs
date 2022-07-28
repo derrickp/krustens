@@ -15,7 +15,10 @@ pub struct SqliteListenTrackerRepository {
 }
 
 impl SqliteListenTrackerRepository {
-    pub async fn get(&mut self, store: &(impl EventStore + Send + std::marker::Sync)) -> &ListenTracker {
+    pub async fn get(
+        &mut self,
+        store: &(impl EventStore + Send + std::marker::Sync),
+    ) -> &ListenTracker {
         let current_version = self.listen_tracker.version;
 
         let store_version = store.stream_version("listens".to_string()).await;

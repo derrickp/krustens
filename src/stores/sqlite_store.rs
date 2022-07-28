@@ -24,13 +24,14 @@ impl EventStore for SqliteStore {
         let row: Option<u32> = match query
             .map(|row: SqliteRow| row.get(0))
             .fetch_one(&self.pool)
-            .await {
-                Ok(it) => it,
-                Err(e) => {
-                    println!("{:?}", e);
-                    None
-                }
-            };
+            .await
+        {
+            Ok(it) => it,
+            Err(e) => {
+                println!("{:?}", e);
+                None
+            }
+        };
 
         match row {
             Some(version) => version,
