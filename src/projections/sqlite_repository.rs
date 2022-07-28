@@ -1,10 +1,8 @@
 use sqlx::{Pool, Sqlite};
 
-use super::{build_id, listen_tracker::ListenTracker, projection_repository::ProjectionRepository};
+use super::{build_id, listen_tracker::ListenTracker};
 
 use std::collections::HashSet;
-
-use async_trait::async_trait;
 
 use crate::{events::EventData, persistence::ReadError, stores::EventStore};
 
@@ -16,14 +14,14 @@ pub struct SqliteListenTrackerRepository {
     not_persisted_count: usize,
 }
 
-#[async_trait]
-impl ProjectionRepository<ListenTracker> for SqliteListenTrackerRepository {
-    async fn get(&mut self, store: &(impl EventStore + Send + std::marker::Sync)) -> ListenTracker {
+impl SqliteListenTrackerRepository {
+    pub async fn get(&mut self, store: &(impl EventStore + Send + std::marker::Sync)) -> &ListenTracker {
         let current_version = self.listen_tracker.version;
+
         let store_version = store.stream_version("listens".to_string()).await;
 
         if current_version == store_version {
-            return self.listen_tracker.clone();
+            return &self.listen_tracker;
         }
 
         let event_stream = store
@@ -55,10 +53,10 @@ impl ProjectionRepository<ListenTracker> for SqliteListenTrackerRepository {
             self.reset_persistence();
         }
 
-        self.listen_tracker.clone()
+        &self.listen_tracker
     }
 
-    async fn flush(&mut self) {
+    pub async fn flush(&mut self) {
         if !self.dirty {
             return;
         }
@@ -117,7 +115,7 @@ impl SqliteListenTrackerRepository {
 pub async fn listen_tracker_repo(
     buffer_count: usize,
     pool: &Pool<Sqlite>,
-) -> impl ProjectionRepository<ListenTracker> {
+) -> SqliteListenTrackerRepository {
     let listen_tracker = SqliteListenTrackerRepository::read(&pool).await.unwrap();
 
     SqliteListenTrackerRepository {
