@@ -5,13 +5,16 @@ mod projections;
 mod spotify;
 mod stores;
 
-use std::fs;
+use std::{fs, str::FromStr};
 
 use chrono::Weekday;
 use clap::{Arg, Command};
 use projections::stats::{FileName, Folder};
 use spotify::TrackPlay;
-use sqlx::{Pool, Sqlite};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
+    Pool, Sqlite,
+};
 use stores::SqliteStore;
 
 use crate::{
@@ -20,18 +23,41 @@ use crate::{
     projections::{
         listen_tracker_repo,
         stats::{DayStat, Stats},
-        ProjectionRepository,
     },
     stores::EventStore,
 };
 
-pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10; // 1000ms in s, 60s in minute
+pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    let db_url = crate::persistence::bootstrap().await.unwrap();
-    let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
+    let database_file = "krustens.sqlite";
+    let database_url = format!("sqlite://{}", database_file);
+
+    let connection_options = SqliteConnectOptions::from_str(&database_url)
+        .unwrap()
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal);
+
+    let pool = SqlitePoolOptions::new()
+        .connect_with(connection_options)
+        .await
+        .unwrap();
     sqlx::migrate!().run(&pool).await.unwrap();
+
+    sqlx::query("pragma temp_store = memory;")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("pragma mmap_size = 30000000000;")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("pragma page_size = 4096;")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let app = Command::new("krustens")
         .version("1.0.1")
@@ -294,7 +320,7 @@ async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sql
                 min_listen_length: MIN_LISTEN_LENGTH,
             };
             let tracker = repository.get(&store).await;
-            let handle_result = command.handle(&tracker);
+            let handle_result = command.handle(tracker);
 
             if let Some(event) = handle_result {
                 if let Err(err) = store
