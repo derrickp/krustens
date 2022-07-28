@@ -18,16 +18,22 @@ impl SqliteStore {
 #[async_trait]
 impl EventStore for SqliteStore {
     async fn stream_version(&self, stream: String) -> u32 {
-        let query = "select MAX(position) from streams where stream = $1";
+        let query =
+            sqlx::query("select MAX(position) from streams where stream = $1").bind(&stream);
 
-        let row: Option<(u32,)> = sqlx::query_as(query)
-            .bind(&stream)
-            .fetch_optional(&self.pool)
-            .await
-            .unwrap();
+        let row: Option<u32> = match query
+            .map(|row: SqliteRow| row.get(0))
+            .fetch_one(&self.pool)
+            .await {
+                Ok(it) => it,
+                Err(e) => {
+                    println!("{:?}", e);
+                    None
+                }
+            };
 
         match row {
-            Some((version,)) => version,
+            Some(version) => version,
             None => 0,
         }
     }
