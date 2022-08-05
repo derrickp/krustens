@@ -1,6 +1,6 @@
 [package]
 name = "krustens"
-version = "2.0.1"
+version = "2.0.2"
 description = "A small application to generate json and yaml files of statistics based on Spotify streaming history files."
 edition = "2021"
 license = "MIT"
@@ -11,7 +11,7 @@ exclude = [
 readme = "README.md"
 homepage = "https://github.com/derrickp/krustens"
 keywords = ["music", "cli"]
-categories = ["command-line-utilities", "command-line-utilities"]
+categories = ["command-line-utilities", "cli"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
