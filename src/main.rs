@@ -2,15 +2,14 @@ mod commands;
 mod events;
 mod persistence;
 mod projections;
-mod spotify;
 mod stores;
+mod track_plays;
 
 use std::{fs, str::FromStr};
 
 use chrono::Weekday;
 use clap::{Arg, Command};
 use projections::stats::{FileName, Folder};
-use spotify::TrackPlay;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     Pool, Sqlite,
@@ -18,13 +17,14 @@ use sqlx::{
 use stores::SqliteStore;
 
 use crate::{
-    commands::AddSpotifyListen,
+    commands::AddTrackPlay,
     persistence::{FileWriter, Writer},
     projections::{
         listen_tracker_repo,
         stats::{DayStat, Stats},
     },
     stores::EventStore,
+    track_plays::Spotify,
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
@@ -121,7 +121,7 @@ async fn main() -> Result<(), std::io::Error> {
                 .long("mode")
                 .short('m')
                 .takes_value(true)
-                .possible_values(&["process", "generate"]),
+                .possible_values(["process", "generate"]),
         );
 
     let matches = app.get_matches();
@@ -297,7 +297,7 @@ async fn write_stats(stats_folder: &Folder, stats: &Stats, count: usize) {
 async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sqlite>) {
     let mut repository = listen_tracker_repo(1500, pool).await;
     let streaming_files =
-        fs::read_dir(&input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
+        fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 
     for entry in streaming_files {
         let path = entry.unwrap().path().clone();
@@ -307,7 +307,7 @@ async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sql
         }
 
         let contents = fs::read_to_string(format!("{}", &path.display())).unwrap();
-        let listens: Vec<TrackPlay> = match serde_json::from_str(&contents) {
+        let listens: Vec<Spotify> = match serde_json::from_str(&contents) {
             Ok(it) => it,
             _ => {
                 println!("could not parse {}", path.display());
@@ -315,8 +315,8 @@ async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sql
             }
         };
         for listen in listens.iter() {
-            let command = AddSpotifyListen {
-                listen: listen.clone(),
+            let command = AddTrackPlay {
+                track_play: track_plays::TrackPlay::Spotify(listen.clone()),
                 min_listen_length: MIN_LISTEN_LENGTH,
             };
             let tracker = repository.get(&store).await;
