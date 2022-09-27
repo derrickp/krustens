@@ -1,5 +1,16 @@
 {
   "editor.detectIndentation": false,
   "editor.tabSize": 4,
-  "cSpell.words": ["chrono", "Datelike", "krustens"]
+  "cSpell.words": ["chrono", "Datelike", "krustens"],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "target": true,
+    "*.sqlite": true,
+    "*.sqlite-*": true,
+  }
 }
