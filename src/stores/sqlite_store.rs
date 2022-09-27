@@ -33,10 +33,7 @@ impl EventStore for SqliteStore {
             }
         };
 
-        match row {
-            Some(version) => version,
-            None => 0,
-        }
+        row.unwrap_or(0)
     }
 
     async fn add_event(

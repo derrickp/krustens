@@ -100,7 +100,7 @@ impl SqliteListenTrackerRepository {
 
         sqlx::query(query)
             .bind("listen_tracker")
-            .bind(value.version.clone())
+            .bind(value.version)
             .bind(&serialized)
             .execute(pool)
             .await
@@ -119,7 +119,7 @@ pub async fn listen_tracker_repo(
     buffer_count: usize,
     pool: &Pool<Sqlite>,
 ) -> SqliteListenTrackerRepository {
-    let listen_tracker = SqliteListenTrackerRepository::read(&pool).await.unwrap();
+    let listen_tracker = SqliteListenTrackerRepository::read(pool).await.unwrap();
 
     SqliteListenTrackerRepository {
         pool: pool.clone(),
