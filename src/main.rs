@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod errors;
 mod events;
 mod persistence;
 mod projections;

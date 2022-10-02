@@ -4,7 +4,7 @@ use super::{build_id, listen_tracker::ListenTracker};
 
 use std::collections::HashSet;
 
-use crate::{events::EventData, persistence::ReadError, stores::EventStore};
+use crate::{errors::ReadError, events::EventData, stores::EventStore};
 
 pub struct SqliteListenTrackerRepository {
     pool: Pool<Sqlite>,
@@ -78,11 +78,15 @@ impl SqliteListenTrackerRepository {
         let row: Option<(String, u32)> = sqlx::query_as(query).fetch_optional(pool).await.unwrap();
 
         match row {
-            Some((data, version)) => {
-                let listens: HashSet<String> = serde_json::from_str(&data).unwrap();
-
-                Ok(ListenTracker { listens, version })
-            }
+            Some((data, version)) => match serde_json::from_str(&data) {
+                Ok(it) => Ok(ListenTracker {
+                    listens: it,
+                    version,
+                }),
+                Err(e) => Err(ReadError::FailedToDeserializeJson {
+                    message: e.to_string(),
+                }),
+            },
             None => Ok(ListenTracker {
                 listens: HashSet::new(),
                 version: 0,
@@ -93,7 +97,7 @@ impl SqliteListenTrackerRepository {
     async fn write(
         pool: &Pool<Sqlite>,
         value: &ListenTracker,
-    ) -> Result<bool, crate::persistence::WriteError> {
+    ) -> Result<bool, crate::errors::WriteError> {
         let query = "insert or replace into snapshots (name, version, data) values ($1, $2, $3)";
 
         let serialized = serde_json::to_string(&value.listens).unwrap();

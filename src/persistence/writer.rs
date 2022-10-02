@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Serialize;
 
-use super::write_error::WriteError;
+use crate::errors::WriteError;
 
 #[async_trait]
 pub trait Writer<T: Serialize> {

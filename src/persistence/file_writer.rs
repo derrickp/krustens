@@ -6,7 +6,9 @@ use std::{
 use async_trait::async_trait;
 use serde::Serialize;
 
-use super::{write_error::WriteError, writer::Writer};
+use crate::errors::WriteError;
+
+use super::writer::Writer;
 
 pub enum FileType {
     Yaml,
@@ -42,7 +44,8 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
         let file = match File::create(self.path.clone()) {
             Ok(it) => it,
             Err(e) => {
-                return Err(WriteError {
+                return Err(WriteError::CannotCreateFile {
+                    path: self.path.to_string(),
                     message: e.to_string(),
                 })
             }
@@ -53,7 +56,7 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
             FileType::Json => match serde_json::to_writer(&mut writer, value) {
                 Ok(_) => {}
                 Err(e) => {
-                    return Err(WriteError {
+                    return Err(WriteError::FailedToSerializeJson {
                         message: e.to_string(),
                     })
                 }
@@ -61,7 +64,7 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
             FileType::Yaml => match serde_yaml::to_writer(&mut writer, value) {
                 Ok(_) => {}
                 Err(e) => {
-                    return Err(WriteError {
+                    return Err(WriteError::FailedToSerializeYaml {
                         message: e.to_string(),
                     })
                 }
@@ -70,7 +73,8 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
 
         match writer.flush() {
             Ok(_) => Ok(true),
-            Err(e) => Err(WriteError {
+            Err(e) => Err(WriteError::CannotWriteToFile {
+                path: self.path.to_string(),
                 message: e.to_string(),
             }),
         }

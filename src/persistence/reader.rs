@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use super::read_error::ReadError;
+use crate::errors::ReadError;
 
 #[async_trait]
 pub trait Reader<T> {
