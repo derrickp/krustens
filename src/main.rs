@@ -1,3 +1,4 @@
+mod cli;
 mod commands;
 mod events;
 mod persistence;
@@ -8,7 +9,7 @@ mod track_plays;
 use std::{fs, str::FromStr};
 
 use chrono::Weekday;
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::Parser;
 use projections::stats::{FileName, Folder};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
@@ -28,53 +29,6 @@ use crate::{
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-enum Mode {
-    Process,
-    Generate,
-}
-
-#[derive(Args, Debug)]
-struct GenerateArgs {
-    /// Folder to place output files into.
-    #[arg(short, long, default_value = "./output")]
-    output: String,
-
-    /// How many artists/songs you want to include.
-    #[arg(short, long, default_value_t = 25)]
-    count: usize,
-
-    /// Year to generate statistics for.
-    #[arg(short, long)]
-    year: Option<i32>,
-
-    /// Split the statistics down by month.
-    #[arg(short, long, default_value_t = false)]
-    split_monthly: bool,
-}
-
-#[derive(Args, Debug)]
-struct ProcessArgs {
-    /// Folder that contains the streaming history.
-    #[arg(short, long, default_value = "./data/play_history")]
-    input: String,
-}
-
-#[derive(Debug, Subcommand)]
-enum Commands {
-    /// Process the streaming history files to generate listens database.
-    Process(ProcessArgs),
-    /// Generate statistics from the listens database.
-    Generate(GenerateArgs),
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct CliArgs {
-    #[command(subcommand)]
-    command: Commands,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -106,14 +60,14 @@ async fn main() -> Result<(), std::io::Error> {
         .await
         .unwrap();
 
-    let args = CliArgs::parse();
+    let args = cli::Arguments::parse();
 
     match args.command {
-        Commands::Process(process_args) => {
+        cli::Commands::Process(process_args) => {
             process_listens(&process_args.input, SqliteStore::build(pool.clone()), &pool).await;
             Ok(())
         }
-        Commands::Generate(generate_args) => {
+        cli::Commands::Generate(generate_args) => {
             generate_stats(
                 &generate_args.output,
                 generate_args.count,
