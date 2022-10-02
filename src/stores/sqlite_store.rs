@@ -1,9 +1,12 @@
 use async_trait::async_trait;
 use sqlx::{sqlite::SqliteRow, Pool, Row, Sqlite};
 
-use crate::events::{Event, EventData};
+use crate::{
+    errors::{AddEventError, GetEventsError},
+    events::{Event, EventData},
+};
 
-use super::{event_store::EventStore, AddEventError, EventStream, GetEventsError};
+use super::{event_store::EventStore, EventStream};
 
 pub struct SqliteStore {
     pool: Pool<Sqlite>,
@@ -45,7 +48,10 @@ impl EventStore for SqliteStore {
         let current_version = self.stream_version(stream.clone()).await;
 
         if expected_version <= current_version as u32 {
-            return Err(AddEventError);
+            return Err(AddEventError::VersionOutOfDate {
+                expected_version,
+                current_version,
+            });
         }
 
         let data = serde_json::to_string(&event.data).unwrap();
@@ -65,7 +71,7 @@ impl EventStore for SqliteStore {
     async fn get_events(&self, stream: String) -> Result<EventStream, GetEventsError> {
         let query = "select data, position from streams where stream = $1";
 
-        let events: Vec<Event> = sqlx::query(query)
+        let result = sqlx::query(query)
             .bind(&stream)
             .map(|row: SqliteRow| {
                 let data: String = row.try_get("data").unwrap();
@@ -77,12 +83,19 @@ impl EventStore for SqliteStore {
                 }
             })
             .fetch_all(&self.pool)
-            .await
-            .unwrap();
+            .await;
 
-        let version = events.len() as u32;
+        match result {
+            Ok(events) => {
+                let version = events.len() as u32;
 
-        Ok(EventStream { events, version })
+                Ok(EventStream { events, version })
+            }
+            Err(e) => Err(GetEventsError::UnableToReadStream {
+                message: e.to_string(),
+                event_source: "sqlite".to_string(),
+            }),
+        }
     }
 
     async fn get_events_after(
@@ -92,7 +105,7 @@ impl EventStore for SqliteStore {
     ) -> Result<EventStream, GetEventsError> {
         let query = "select data, position from streams where stream = $1 and position > $2";
 
-        let events: Vec<Event> = sqlx::query(query)
+        let result = sqlx::query(query)
             .bind(&stream)
             .bind(version)
             .map(|row: SqliteRow| {
@@ -105,13 +118,20 @@ impl EventStore for SqliteStore {
                 }
             })
             .fetch_all(&self.pool)
-            .await
-            .unwrap();
+            .await;
 
-        let current_version = events.len() as u32;
-        Ok(EventStream {
-            events,
-            version: current_version,
-        })
+        match result {
+            Ok(events) => {
+                let current_version = events.len() as u32;
+                Ok(EventStream {
+                    events,
+                    version: current_version,
+                })
+            }
+            Err(e) => Err(GetEventsError::UnableToReadStream {
+                message: e.to_string(),
+                event_source: "sqlite".to_string(),
+            }),
+        }
     }
 }

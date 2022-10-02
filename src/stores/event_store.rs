@@ -1,8 +1,11 @@
 use async_trait::async_trait;
 
-use crate::events::Event;
+use crate::{
+    errors::{AddEventError, GetEventsError},
+    events::Event,
+};
 
-use super::{AddEventError, EventStream, GetEventsError};
+use super::EventStream;
 
 #[async_trait]
 pub trait EventStore {
