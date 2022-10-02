@@ -1,6 +1,6 @@
 [package]
 name = "krustens"
-version = "2.0.3"
+version = "3.0.0"
 description = "A small application to generate json and yaml files of statistics based on Spotify streaming history files."
 edition = "2021"
 license = "MIT"
@@ -18,7 +18,7 @@ categories = ["command-line-utilities"]
 [dependencies]
 async-trait = "0.1"
 chrono = "0.4"
-clap = "3.2"
+clap = { version = "4.0", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"

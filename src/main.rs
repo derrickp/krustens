@@ -8,7 +8,7 @@ mod track_plays;
 use std::{fs, str::FromStr};
 
 use chrono::Weekday;
-use clap::{Arg, Command};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use projections::stats::{FileName, Folder};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
@@ -28,6 +28,53 @@ use crate::{
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Mode {
+    Process,
+    Generate,
+}
+
+#[derive(Args, Debug)]
+struct GenerateArgs {
+    /// Folder to place output files into.
+    #[arg(short, long, default_value = "./output")]
+    output: String,
+
+    /// How many artists/songs you want to include.
+    #[arg(short, long, default_value_t = 25)]
+    count: usize,
+
+    /// Year to generate statistics for.
+    #[arg(short, long)]
+    year: Option<i32>,
+
+    /// Split the statistics down by month.
+    #[arg(short, long, default_value_t = false)]
+    split_monthly: bool,
+}
+
+#[derive(Args, Debug)]
+struct ProcessArgs {
+    /// Folder that contains the streaming history.
+    #[arg(short, long, default_value = "./data/play_history")]
+    input: String,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    /// Process the streaming history files to generate listens database.
+    Process(ProcessArgs),
+    /// Generate statistics from the listens database.
+    Generate(GenerateArgs),
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct CliArgs {
+    #[command(subcommand)]
+    command: Commands,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -59,96 +106,20 @@ async fn main() -> Result<(), std::io::Error> {
         .await
         .unwrap();
 
-    let app = Command::new("krustens")
-        .version("1.0.1")
-        .author("derrickp")
-        .about("Generate stats from spotify history")
-        .arg(
-            Arg::new("input")
-                .long("input")
-                .short('i')
-                .required(false)
-                .takes_value(true)
-                .help("folder that contains the spotify streaming history")
-                .default_value("./data/spotify_play_history"),
-        )
-        .arg(
-            Arg::new("output")
-                .short('o')
-                .long("output")
-                .takes_value(true)
-                .help("Folder to place the generated stats in")
-                .default_value("./output"),
-        )
-        .arg(
-            Arg::new("count")
-                .long("count")
-                .short('c')
-                .takes_value(true)
-                .validator(|count| match str::parse::<usize>(count) {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.to_string()),
-                })
-                .help("how many top artists/songs to include in the generated general statistics")
-                .default_value("25"),
-        )
-        .arg(
-            Arg::new("year")
-                .long("year")
-                .short('y')
-                .required(false)
-                .takes_value(true)
-                .validator(|year| match str::parse::<i32>(year) {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.to_string()),
-                })
-                .help("year to generate stats for"),
-        )
-        .arg(
-            Arg::new("split_monthly")
-                .long("split_monthly")
-                .short('s')
-                .takes_value(true)
-                .validator(|include| match str::parse::<bool>(include) {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.to_string()),
-                })
-                .help("split year stats down by months")
-                .default_value("false"),
-        )
-        .arg(
-            Arg::new("mode")
-                .long("mode")
-                .short('m')
-                .takes_value(true)
-                .possible_values(["process", "generate"]),
-        );
+    let args = CliArgs::parse();
 
-    let matches = app.get_matches();
-    let mode = matches.value_of("mode").unwrap_or("generate");
-    let year = matches
-        .value_of("year")
-        .map(|it| str::parse::<i32>(it).unwrap());
-    let split_monthly = match matches.value_of("split_monthly") {
-        Some(it) => str::parse::<bool>(it).unwrap(),
-        _ => false,
-    };
-    let output_folder = matches.value_of("output").unwrap();
-    let input_folder = matches.value_of("input").unwrap();
-    let stats_count = str::parse::<usize>(matches.value_of("count").unwrap()).unwrap();
-
-    match mode {
-        "process" => {
-            process_listens(input_folder, SqliteStore::build(pool.clone()), &pool).await;
+    match args.command {
+        Commands::Process(process_args) => {
+            process_listens(&process_args.input, SqliteStore::build(pool.clone()), &pool).await;
             Ok(())
         }
-        _ => {
+        Commands::Generate(generate_args) => {
             generate_stats(
-                output_folder,
-                stats_count,
+                &generate_args.output,
+                generate_args.count,
                 SqliteStore::build(pool.clone()),
-                year,
-                split_monthly,
+                generate_args.year,
+                generate_args.split_monthly,
             )
             .await;
             Ok(())
