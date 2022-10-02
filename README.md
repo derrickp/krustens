@@ -16,6 +16,7 @@ cargo run -- process
 ```
 to generate the events. The command `process` tells the app to process all of the listens in the input directory. A sqlite database (named `krustens.sqlite`) is generated when processing that will contain all of the events and snapshots of the data. Anytime the listens are processed this database will be used to check if the listen has been tracked already.
 
+### Generating Statistics
 Once the events have been generated, you can generate statistics by just running the program with the `generate` command.
 ```bash
 cargo run -- generate
