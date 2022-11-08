@@ -7,16 +7,21 @@ mod projections;
 mod stores;
 mod track_plays;
 
-use std::{fs, str::FromStr};
+use std::{fs, str::FromStr, sync::Arc};
 
 use chrono::Weekday;
 use clap::Parser;
-use projections::stats::{FileName, Folder};
+use projections::{
+    stats::{FileName, Folder},
+    AlbumListenCounts,
+};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     Pool, Sqlite,
 };
 use stores::SqliteStore;
+use tokio::sync::Mutex;
+use tune_sage::api::{cache::FileSystemCache, recordings::RecordingApi, HttpRemote};
 
 use crate::{
     commands::AddTrackPlay,
@@ -104,6 +109,32 @@ async fn generate_all_stats(output_folder: &str, count: usize, store: SqliteStor
         month: None,
     };
     let event_stream = store.get_events("listens".to_string()).await.unwrap();
+
+    let cache = Arc::new(Mutex::new(FileSystemCache::for_folder("./output")));
+    let http_remote = HttpRemote;
+    let config = tune_sage::api::Config {
+        base_url: "https://musicbrainz.org/ws/2".to_string(),
+        user_agent: "Krustens <https://github.com/derrickp/krustens>".to_string(),
+    };
+
+    let api = RecordingApi {
+        config,
+        cache,
+        remote: Arc::new(http_remote),
+    };
+
+    let mut count_projection = AlbumListenCounts {
+        recording_api: Arc::new(Mutex::new(api)),
+    };
+
+    let monthly_stats = count_projection
+        .monthly_listens(event_stream.events.iter().collect())
+        .await;
+
+    FileWriter::from("./output/monthly.json".to_string())
+        .write(&monthly_stats)
+        .await
+        .unwrap();
 
     let stats = Stats::generate(event_stream.events.iter().collect());
     write_stats(&folder, &stats, count).await;

@@ -14,19 +14,17 @@ pub use song_play_count::SongPlayCount;
 
 use std::{cmp::Reverse, collections::HashMap};
 
-use chrono::{Datelike, NaiveDateTime, ParseResult, Weekday};
+use chrono::{Datelike, Weekday};
 use serde::Serialize;
 
 use crate::events::{Event, EventData};
+
+use super::utils::parse_end_time;
 
 #[derive(Debug, Serialize, Default)]
 pub struct Stats {
     pub stats: HashMap<String, PlayCount>,
     pub skipped: HashMap<String, SkippedTrack>,
-}
-
-fn parse_end_time(end_time: &str) -> ParseResult<NaiveDateTime> {
-    NaiveDateTime::parse_from_str(end_time, "%Y-%m-%d %H:%M")
 }
 
 impl Stats {
