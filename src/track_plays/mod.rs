@@ -1,3 +1,4 @@
+pub mod apple_music;
 mod normalized;
 mod spotify;
 mod track_play;
