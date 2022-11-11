@@ -85,6 +85,7 @@ impl SqliteListenTrackerRepository {
                 }),
                 Err(e) => Err(ReadError::FailedToDeserializeJson {
                     message: e.to_string(),
+                    file_name: "".to_string(),
                 }),
             },
             None => Ok(ListenTracker {
