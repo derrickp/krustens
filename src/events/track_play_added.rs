@@ -6,4 +6,5 @@ pub struct TrackPlayAdded {
     pub track_name: String,
     pub ms_played: u64,
     pub end_time: String,
+    pub service_hint: String,
 }
