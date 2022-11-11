@@ -14,19 +14,18 @@ pub use song_play_count::SongPlayCount;
 
 use std::{cmp::Reverse, collections::HashMap};
 
-use chrono::{Datelike, NaiveDateTime, ParseResult, Weekday};
+use chrono::{Datelike, Weekday};
 use serde::Serialize;
 
-use crate::events::{Event, EventData};
+use crate::{
+    events::{Event, EventData},
+    utils::parse_formatted_end_time,
+};
 
 #[derive(Debug, Serialize, Default)]
 pub struct Stats {
     pub stats: HashMap<String, PlayCount>,
     pub skipped: HashMap<String, SkippedTrack>,
-}
-
-fn parse_end_time(end_time: &str) -> ParseResult<NaiveDateTime> {
-    NaiveDateTime::parse_from_str(end_time, "%Y-%m-%d %H:%M")
 }
 
 impl Stats {
@@ -35,9 +34,11 @@ impl Stats {
             .iter()
             .filter(|event| {
                 let end_time = match &event.data {
-                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayAdded(added) => {
+                        parse_formatted_end_time(added.end_time.as_str())
+                    }
                     EventData::TrackPlayIgnored(ignored) => {
-                        parse_end_time(ignored.end_time.as_str())
+                        parse_formatted_end_time(ignored.end_time.as_str())
                     }
                 };
 
@@ -57,9 +58,11 @@ impl Stats {
             .iter()
             .filter(|event| {
                 let end_time = match &event.data {
-                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayAdded(added) => {
+                        parse_formatted_end_time(added.end_time.as_str())
+                    }
                     EventData::TrackPlayIgnored(ignored) => {
-                        parse_end_time(ignored.end_time.as_str())
+                        parse_formatted_end_time(ignored.end_time.as_str())
                     }
                 };
 
@@ -109,9 +112,11 @@ impl Stats {
             .iter()
             .filter(|event| {
                 let end_time = match &event.data {
-                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayAdded(added) => {
+                        parse_formatted_end_time(added.end_time.as_str())
+                    }
                     EventData::TrackPlayIgnored(ignored) => {
-                        parse_end_time(ignored.end_time.as_str())
+                        parse_formatted_end_time(ignored.end_time.as_str())
                     }
                 };
 
@@ -145,9 +150,11 @@ impl Stats {
             .iter()
             .filter(|event| {
                 let end_time = match &event.data {
-                    EventData::TrackPlayAdded(added) => parse_end_time(added.end_time.as_str()),
+                    EventData::TrackPlayAdded(added) => {
+                        parse_formatted_end_time(added.end_time.as_str())
+                    }
                     EventData::TrackPlayIgnored(ignored) => {
-                        parse_end_time(ignored.end_time.as_str())
+                        parse_formatted_end_time(ignored.end_time.as_str())
                     }
                 };
 
