@@ -27,7 +27,7 @@ use crate::{
         stats::{DayStat, Stats},
     },
     stores::EventStore,
-    track_plays::Spotify,
+    track_plays::read_track_plays,
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
@@ -229,21 +229,17 @@ async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sql
     for entry in streaming_files {
         let path = entry.unwrap().path().clone();
 
-        if !format!("{}", &path.display()).ends_with(".json") {
-            continue;
-        }
-
-        let contents = fs::read_to_string(format!("{}", &path.display())).unwrap();
-        let listens: Vec<Spotify> = match serde_json::from_str(&contents) {
+        let track_plays = match read_track_plays(&path) {
             Ok(it) => it,
-            _ => {
-                println!("could not parse {}", path.display());
+            Err(e) => {
+                println!("{:?}", e);
                 continue;
             }
         };
-        for listen in listens.iter() {
+
+        for track_play in track_plays.iter() {
             let command = AddTrackPlay {
-                track_play: track_plays::TrackPlay::Spotify(listen.clone()),
+                track_play: track_play.clone(),
                 min_listen_length: MIN_LISTEN_LENGTH,
             };
             let tracker = repository.get(&store).await;
