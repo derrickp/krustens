@@ -3,10 +3,14 @@
 Get statistics from your listening history. Currently only supports Spotify, but I plan to add support for histories from other services in the future.
 
 ## Usage
-**Required:** At least one file downloaded from Spotify of your listening history. It can be downloaded from the `Account` -> `Privacy` page after requesting an export of your data. In the resulting export it will be a file named similar to `StreamingHistory0.json`. This program can use any number of them.
+**Required:** At least one file downloaded from Spotify or Apple Music of your listening history.
+
+For Spotify it can be downloaded from the `Account` -> `Privacy` page after requesting an export of your data. In the resulting export it will be a file named similar to `StreamingHistory0.json`. This program can use any number of them.
+
+For Apple Music you can request this data using Apple's https://privacy.apple.com/account page and specifically requesting the media information. There should be a file that has `Track Play History` in the name. This is currently the only file supported by `krustens`.
 
 ### Generating Listen Events
-`Krustens` reads the streaming history files and generates events it can read back later to generate the statistics. It does this to attempt to ensure that it does not double-count any duplicate track plays between the spotify history files. `Krustens` right now also counts any song played for less than 10s as "skipped".
+`Krustens` reads the streaming history files and generates events it can read back later to generate the statistics (for now). It does this to attempt to ensure that it does not double-count any duplicate track plays between the history files. `Krustens` right now also counts any song played for less than 10s as "skipped", or less than 10% of the song duration if the listen is from Apple Music (Spotify does not provide that information in the history file and this does not call out to Spotify to check).
 
 To start clone the repo and run `cargo run -- -h` to see the defaults for the input and outputs. If you'd like to change those values, provide different options to `-o` or `-i`. The default for input is `./data/spotify_play_history` and output is `./output`.
 
