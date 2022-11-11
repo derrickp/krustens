@@ -6,6 +6,7 @@ mod persistence;
 mod projections;
 mod stores;
 mod track_plays;
+mod utils;
 
 use std::{fs, str::FromStr};
 
