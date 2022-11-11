@@ -75,12 +75,11 @@ mod tests {
     fn deserialization() {
         let mut reader =
             csv::Reader::from_path("./fixtures/apple_music_play_activity.csv").unwrap();
-        let activities: Vec<PlayActivity> = reader
-            .deserialize()
+        assert!(reader
+            .deserialize::<PlayActivity>()
             .into_iter()
             .map(|r| r.unwrap())
-            .collect();
-        assert!(activities.len() > 0);
+            .next().is_some());
     }
 
     #[test]

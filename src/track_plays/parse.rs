@@ -51,7 +51,7 @@ fn parse_json(path: &PathBuf) -> Result<Vec<TrackPlay>, ReadError> {
         .map(|spotify_listens: Vec<Spotify>| {
             spotify_listens
                 .into_iter()
-                .map(|s| TrackPlay::Spotify(s))
+                .map(TrackPlay::Spotify)
                 .collect()
         })
         .map_err(|err| ReadError::FailedToDeserializeJson {
