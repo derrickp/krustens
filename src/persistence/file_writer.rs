@@ -53,7 +53,7 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
         let mut writer = BufWriter::new(file);
 
         match self.file_type {
-            FileType::Json => match serde_json::to_writer(&mut writer, value) {
+            FileType::Json => match serde_json::to_writer_pretty(&mut writer, value) {
                 Ok(_) => {}
                 Err(e) => {
                     return Err(WriteError::FailedToSerializeJson {
