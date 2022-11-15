@@ -10,7 +10,6 @@
     "**/.DS_Store": true,
     "**/Thumbs.db": true,
     "target": true,
-    "*.sqlite": true,
     "*.sqlite-*": true,
   }
 }
