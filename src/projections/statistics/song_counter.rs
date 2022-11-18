@@ -1,5 +1,3 @@
-use std::cmp::Reverse;
-
 use serde::Serialize;
 
 use crate::track_plays::ArtistName;
@@ -42,11 +40,6 @@ pub struct SongCounter {
 }
 
 impl SongCounter {
-    pub fn sort_by_song_count(&mut self) {
-        self.song_counts
-            .sort_by_key(|song_count| Reverse(song_count.1))
-    }
-
     pub fn total_song_plays(&self) -> u64 {
         self.total_song_plays
     }

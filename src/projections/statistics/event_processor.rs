@@ -57,10 +57,4 @@ impl EventProcessor {
             EventData::TrackPlayIgnored(_) => {}
         };
     }
-
-    pub fn sort_by_song_count(&mut self) {
-        self.artists_counts.sort_by_song_count();
-
-        // TODO: Sort everything.
-    }
 }

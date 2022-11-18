@@ -115,8 +115,6 @@ async fn generate_all_stats(
         processor.process_event(event);
     }
 
-    processor.sort_by_song_count();
-
     write_artists_counts(&folder, &processor.artists_counts, count).await;
 
     if split_monthly {
@@ -159,8 +157,6 @@ async fn generate_stats_for_single_year(
         processor.process_event(event);
     }
 
-    processor.sort_by_song_count();
-
     for year_count in processor
         .year_counts()
         .iter()
@@ -197,7 +193,7 @@ async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, coun
         .await
         .unwrap();
     FileWriter::from(stats_folder.file_name(&FileName::Complete))
-        .write(stats)
+        .write(&stats.all())
         .await
         .unwrap();
     FileWriter::from(stats_folder.file_name(&FileName::Top50))

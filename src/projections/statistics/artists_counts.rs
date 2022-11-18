@@ -15,12 +15,6 @@ pub struct ArtistsCounts {
 }
 
 impl ArtistsCounts {
-    pub fn sort_by_song_count(&mut self) {
-        for play_count in self.artists.values_mut() {
-            play_count.sort_by_song_count();
-        }
-    }
-
     pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
         let artist_counts = self
             .artists
@@ -28,6 +22,19 @@ impl ArtistsCounts {
             .or_insert_with(SongCounter::default);
 
         artist_counts.increment_song(song_name, time_played);
+    }
+
+    pub fn all(&self) -> Vec<ArtistSongCounter> {
+        let mut counts: Vec<ArtistSongCounter> = self
+            .artists
+            .iter()
+            .map(|(name, counter)| ArtistSongCounter {
+                artist_name: name.clone(),
+                play_details: counter.clone(),
+            })
+            .collect();
+        counts.sort_by_key(|play| Reverse(play.total_song_plays()));
+        counts.into_iter().collect()
     }
 
     pub fn top(&self, count: usize) -> Vec<ArtistSongCounter> {
