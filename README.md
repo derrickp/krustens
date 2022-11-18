@@ -26,3 +26,10 @@ Once the events have been generated, you can generate statistics by just running
 cargo run -- generate
 ```
 The `output` folder will be generated and it will then contain a number of stats files. Right now the only real values that can be changed is the year to generate statistics for (e.g. 2020 or 2021) and how many _Top_ songs or artists to include in the general stats. For a full list of options run `cargo run -- generate -h`.
+
+### Interactive Mode
+If you want to search for an artist, or an artist's songs in a more interactive way, you can use the `interactive` command.
+```bash
+cargo run -- interactive
+```
+This will let you then run commands like `random artist` and `artist songs` to search for some random artists from your listen history, or list out some songs from an artist.
