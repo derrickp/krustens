@@ -8,4 +8,5 @@ pub enum Commands {
     Process(ProcessArgs),
     /// Generate statistics from the listens database.
     Generate(GenerateArgs),
+    Interactive,
 }

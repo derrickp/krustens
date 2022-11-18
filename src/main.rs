@@ -8,18 +8,20 @@ mod stores;
 mod track_plays;
 mod utils;
 
-use std::{fs, str::FromStr};
+use std::{fs, io::Write, str::FromStr};
 
 use clap::Parser;
 use projections::{
     statistics::{ArtistsCounts, EventProcessor},
     statistics::{FileName, Folder},
 };
+use rand::Rng;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     Pool, Sqlite,
 };
 use stores::SqliteStore;
+use track_plays::ArtistName;
 
 use crate::{
     commands::AddTrackPlay,
@@ -78,6 +80,118 @@ async fn main() -> Result<(), std::io::Error> {
             )
             .await;
             Ok(())
+        }
+        cli::Commands::Interactive => {
+            interactive(SqliteStore::build(pool.clone())).await;
+            Ok(())
+        }
+    }
+}
+
+fn prompt(name: &str) -> String {
+    let mut line = String::new();
+    print!("{}", name);
+    std::io::stdout().flush().unwrap();
+    std::io::stdin()
+        .read_line(&mut line)
+        .expect("Error: Could not read a line");
+
+    return line.trim().to_string();
+}
+
+fn prompt_random_artist(processor: &EventProcessor) -> Vec<String> {
+    let year = prompt("What year to look in? > ")
+        .parse::<i32>()
+        .expect("Error: Not a valid number");
+    let num_artists = prompt("How many artists do you want names of (Default: 1) > ")
+        .parse::<u32>()
+        .ok()
+        .filter(|num| num > &0)
+        .unwrap_or(1);
+    let min_listens = prompt("What minimum number of listens? > ")
+        .parse::<u64>()
+        .unwrap_or_default();
+    let month = prompt("What month do you want to look in (1-12)? > ")
+        .parse::<u32>()
+        .ok()
+        .filter(|m| (&1..=&12).contains(&m))
+        .unwrap_or_default();
+
+    processor
+        .year_count(year)
+        .map(|year_count| {
+            let mut rng = rand::thread_rng();
+            let mut artist_counters = if month == 0 {
+                year_count.over_min_plays(min_listens)
+            } else {
+                year_count
+                    .month_count(month)
+                    .map(|month_count| month_count.over_min_plays(min_listens))
+                    .unwrap_or_default()
+            };
+
+            if artist_counters.is_empty() {
+                vec!["No artists found".to_string()]
+            } else {
+                let mut names: Vec<String> = Vec::new();
+
+                for _ in 0..num_artists {
+                    if artist_counters.is_empty() {
+                        break;
+                    }
+                    let index = rng.gen_range(0..artist_counters.len());
+                    let artist_counter = artist_counters.remove(index);
+                    names.push(artist_counter.artist_name.to_string());
+                }
+
+                names
+            }
+        })
+        .unwrap_or_else(|| vec!["No listens for that year".to_string()])
+}
+
+fn prompt_artist_songs(processor: &EventProcessor) -> Vec<String> {
+    let artist_name = ArtistName(prompt("What artist do you want to look for? > "));
+
+    processor
+        .artist_song_counter(&artist_name)
+        .map(|artist_counter| {
+            artist_counter
+                .play_details
+                .all_song_plays()
+                .iter()
+                .map(|song_play| song_play.0.clone())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+async fn interactive(store: SqliteStore) {
+    println!("Loading...");
+    let mut processor = EventProcessor::default();
+    let event_stream = store.get_events("listens".to_string()).await.unwrap();
+    for event in event_stream.events.iter() {
+        processor.process_event(event);
+    }
+
+    loop {
+        let input = prompt("(q to exit, c for command list) > ");
+
+        if input == "q" {
+            break;
+        } else if input == "random artist" {
+            let artist_names = prompt_random_artist(&processor);
+            for name in artist_names {
+                println!(">> {}", name);
+            }
+        } else if input == "artist songs" {
+            let song_names = prompt_artist_songs(&processor);
+            for name in song_names {
+                println!(">> {}", name);
+            }
+        } else if input == "c" {
+            println!(">> random artist -> search for a random artist from your listening history.");
+            println!(">> artist songs -> list out all of the songs for a single artist from your listening history.");
         }
     }
 }
