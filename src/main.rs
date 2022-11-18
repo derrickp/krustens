@@ -10,9 +10,11 @@ mod utils;
 
 use std::{fs, str::FromStr};
 
-use chrono::Weekday;
 use clap::Parser;
-use projections::stats::{FileName, Folder};
+use projections::{
+    statistics::{ArtistsCounts, EventProcessor},
+    statistics::{FileName, Folder},
+};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     Pool, Sqlite,
@@ -22,10 +24,7 @@ use stores::SqliteStore;
 use crate::{
     commands::AddTrackPlay,
     persistence::{FileWriter, Writer},
-    projections::{
-        listen_tracker_repo,
-        stats::{DayStat, Stats},
-    },
+    projections::listen_tracker_repo,
     stores::EventStore,
     track_plays::read_track_plays,
 };
@@ -94,20 +93,56 @@ async fn generate_stats(
         Some(it) => {
             generate_stats_for_single_year(output_folder, count, store, it, split_monthly).await
         }
-        _ => generate_all_stats(output_folder, count, store).await,
+        _ => generate_all_stats(output_folder, count, store, split_monthly).await,
     }
 }
 
-async fn generate_all_stats(output_folder: &str, count: usize, store: SqliteStore) {
+async fn generate_all_stats(
+    output_folder: &str,
+    count: usize,
+    store: SqliteStore,
+    split_monthly: bool,
+) {
     let folder = Folder {
         output_folder: output_folder.to_string(),
         year: None,
         month: None,
     };
     let event_stream = store.get_events("listens".to_string()).await.unwrap();
+    let mut processor = EventProcessor::default();
 
-    let stats = Stats::generate(event_stream.events.iter().collect());
-    write_stats(&folder, &stats, count).await;
+    for event in event_stream.events.iter() {
+        processor.process_event(event);
+    }
+
+    processor.sort_by_song_count();
+
+    write_artists_counts(&folder, &processor.artists_counts, count).await;
+
+    if split_monthly {
+        for year_count in processor.year_counts() {
+            let year_folder = Folder {
+                output_folder: output_folder.to_string(),
+                year: Some(year_count.year),
+                month: None,
+            };
+            year_folder.create_if_necessary();
+            write_artists_counts(&year_folder, &year_count.artists_counts, count).await;
+
+            if split_monthly {
+                for month_count in year_count.month_counts() {
+                    let folder = Folder {
+                        output_folder: output_folder.to_string(),
+                        year: Some(year_count.year),
+                        month: Some(month_count.month),
+                    };
+
+                    folder.create_if_necessary();
+                    write_artists_counts(&folder, &month_count.artists_counts, count).await;
+                }
+            }
+        }
+    }
 }
 
 async fn generate_stats_for_single_year(
@@ -119,88 +154,42 @@ async fn generate_stats_for_single_year(
 ) {
     let event_stream = store.get_events("listens".to_string()).await.unwrap();
 
-    if split_monthly {
-        for month in 1..=12 {
-            let stats = Stats::generate_month_year(
-                event_stream.events.iter().collect(),
-                year,
-                month as u32,
-            );
-
-            let folder = Folder {
-                output_folder: output_folder.to_string(),
-                year: Some(year),
-                month: Some(month),
-            };
-
-            let weekdays = vec![
-                Weekday::Sun,
-                Weekday::Mon,
-                Weekday::Tue,
-                Weekday::Wed,
-                Weekday::Thu,
-                Weekday::Fri,
-                Weekday::Sat,
-            ];
-
-            let day_stats: Vec<DayStat> = weekdays
-                .iter()
-                .map(|day| {
-                    Stats::generate_day_stat(
-                        event_stream.events.iter().collect(),
-                        year,
-                        month,
-                        *day,
-                        5,
-                    )
-                })
-                .collect();
-
-            folder.create_if_necessary();
-            FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
-                .write(&day_stats)
-                .await
-                .unwrap();
-
-            write_stats(&folder, &stats, count).await;
-        }
+    let mut processor = EventProcessor::default();
+    for event in event_stream.events.iter() {
+        processor.process_event(event);
     }
 
-    let stats = Stats::generate_for_year(event_stream.events.iter().collect(), year);
+    processor.sort_by_song_count();
 
-    let weekdays = vec![
-        Weekday::Sun,
-        Weekday::Mon,
-        Weekday::Tue,
-        Weekday::Wed,
-        Weekday::Thu,
-        Weekday::Fri,
-        Weekday::Sat,
-    ];
-
-    let day_stats: Vec<DayStat> = weekdays
+    for year_count in processor
+        .year_counts()
         .iter()
-        .map(|day| {
-            Stats::generate_day_stat_all_year(event_stream.events.iter().collect(), year, *day, 10)
-        })
-        .collect();
+        .filter(|year_count| year_count.year == year)
+    {
+        let year_folder = Folder {
+            output_folder: output_folder.to_string(),
+            year: Some(year),
+            month: None,
+        };
+        year_folder.create_if_necessary();
+        write_artists_counts(&year_folder, &year_count.artists_counts, count).await;
 
-    let folder = Folder {
-        output_folder: output_folder.to_string(),
-        year: Some(year),
-        month: None,
-    };
+        if split_monthly {
+            for month_count in year_count.month_counts() {
+                let folder = Folder {
+                    output_folder: output_folder.to_string(),
+                    year: Some(year_count.year),
+                    month: Some(month_count.month),
+                };
 
-    folder.create_if_necessary();
-    FileWriter::yaml_writer(folder.file_name(&FileName::Daily))
-        .write(&day_stats)
-        .await
-        .unwrap();
-
-    write_stats(&folder, &stats, count).await;
+                folder.create_if_necessary();
+                write_artists_counts(&folder, &month_count.artists_counts, count).await;
+            }
+        }
+    }
 }
 
-async fn write_stats(stats_folder: &Folder, stats: &Stats, count: usize) {
+async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, count: usize) {
     stats_folder.create_if_necessary();
 
     FileWriter::yaml_writer(stats_folder.file_name(&FileName::General))

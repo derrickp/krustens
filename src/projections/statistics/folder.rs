@@ -11,14 +11,12 @@ pub enum FileName {
     General,
     Top50,
     Top100,
-    Daily,
 }
 
 impl ToString for FileName {
     fn to_string(&self) -> String {
         match *self {
             FileName::Complete => "complete.json".to_string(),
-            FileName::Daily => "daily.yaml".to_string(),
             FileName::General => "general.yaml".to_string(),
             FileName::Top50 => "top_50.json".to_string(),
             FileName::Top100 => "top_100.json".to_string(),
