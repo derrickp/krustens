@@ -47,7 +47,7 @@ impl Folder {
 
     pub fn create_if_necessary(&self) {
         if !Path::new(&self.folder_name()).exists() {
-            create_dir_all(&self.folder_name()).unwrap()
+            create_dir_all(self.folder_name()).unwrap()
         }
     }
 

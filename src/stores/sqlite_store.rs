@@ -47,7 +47,7 @@ impl EventStore for SqliteStore {
     ) -> Result<(), AddEventError> {
         let current_version = self.stream_version(stream.clone()).await;
 
-        if expected_version <= current_version as u32 {
+        if expected_version <= current_version {
             return Err(AddEventError::VersionOutOfDate {
                 expected_version,
                 current_version,
