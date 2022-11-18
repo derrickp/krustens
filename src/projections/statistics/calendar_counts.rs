@@ -91,7 +91,7 @@ impl MonthCounts {
 #[derive(Serialize)]
 pub struct DayCounts {
     pub day_of_month: u32,
-    pub weekday: String,
+    pub weekday: Weekday,
     pub artists_counts: ArtistsCounts,
 }
 
@@ -99,7 +99,7 @@ impl From<&CalendarDay> for DayCounts {
     fn from(calendar_day: &CalendarDay) -> Self {
         Self {
             day_of_month: calendar_day.day,
-            weekday: calendar_day.weekday.to_string(),
+            weekday: calendar_day.weekday,
             artists_counts: ArtistsCounts::default(),
         }
     }
