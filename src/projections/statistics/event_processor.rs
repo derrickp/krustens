@@ -10,6 +10,7 @@ use crate::{
 
 use super::{
     calendar_counts::{CalendarDay, YearCounts},
+    song_counter::ArtistSongCounter,
     ArtistsCounts,
 };
 
@@ -22,6 +23,14 @@ pub struct EventProcessor {
 impl EventProcessor {
     pub fn year_counts(&self) -> Vec<&YearCounts> {
         self.years.values().collect()
+    }
+
+    pub fn year_count(&self, year: i32) -> Option<&YearCounts> {
+        self.years.get(&year)
+    }
+
+    pub fn artist_song_counter(&self, artist_name: &ArtistName) -> Option<ArtistSongCounter> {
+        self.artists_counts.find_artist(artist_name)
     }
 
     pub fn process_event(&mut self, event: &Event) {

@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::track_plays::ArtistName;
 
-use super::artists_counts::ArtistsCounts;
+use super::{artists_counts::ArtistsCounts, song_counter::ArtistSongCounter};
 
 pub struct CalendarDay {
     pub year: i32,
@@ -48,8 +48,16 @@ impl YearCounts {
             .add_song_play(artist_name, song_name, time_played);
     }
 
+    pub fn over_min_plays(&self, min: u64) -> Vec<ArtistSongCounter> {
+        self.artists_counts.over_min_plays(min)
+    }
+
     pub fn month_counts(&self) -> Vec<&MonthCounts> {
         self.months.values().collect()
+    }
+
+    pub fn month_count(&self, month: u32) -> Option<&MonthCounts> {
+        self.months.get(&month)
     }
 }
 
@@ -85,6 +93,10 @@ impl MonthCounts {
         day_counts.add_song_play(artist_name, song_name, time_played);
         self.artists_counts
             .add_song_play(artist_name, song_name, time_played);
+    }
+
+    pub fn over_min_plays(&self, min: u64) -> Vec<ArtistSongCounter> {
+        self.artists_counts.over_min_plays(min)
     }
 }
 

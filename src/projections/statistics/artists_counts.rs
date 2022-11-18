@@ -15,6 +15,19 @@ pub struct ArtistsCounts {
 }
 
 impl ArtistsCounts {
+    pub fn find_artist(&self, name: &ArtistName) -> Option<ArtistSongCounter> {
+        self.artists.iter().find_map(|(n, v)| {
+            if name.0.to_lowercase() == n.0.to_lowercase() {
+                Some(ArtistSongCounter {
+                    artist_name: n.clone(),
+                    play_details: v.clone(),
+                })
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
         let artist_counts = self
             .artists
@@ -22,6 +35,22 @@ impl ArtistsCounts {
             .or_insert_with(SongCounter::default);
 
         artist_counts.increment_song(song_name, time_played);
+    }
+
+    pub fn over_min_plays(&self, min_plays: u64) -> Vec<ArtistSongCounter> {
+        self.artists
+            .iter()
+            .filter_map(|(name, counter)| {
+                if counter.total_song_plays() < min_plays {
+                    None
+                } else {
+                    Some(ArtistSongCounter {
+                        artist_name: name.clone(),
+                        play_details: counter.clone(),
+                    })
+                }
+            })
+            .collect()
     }
 
     pub fn all(&self) -> Vec<ArtistSongCounter> {
