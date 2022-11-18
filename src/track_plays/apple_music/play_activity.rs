@@ -79,7 +79,8 @@ mod tests {
             .deserialize::<PlayActivity>()
             .into_iter()
             .map(|r| r.unwrap())
-            .next().is_some());
+            .next()
+            .is_some());
     }
 
     #[test]
