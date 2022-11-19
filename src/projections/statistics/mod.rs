@@ -9,7 +9,7 @@ mod time_played;
 
 pub use artists_counts::ArtistsCounts;
 pub use event_processor::EventProcessor;
-pub use folder::{FileName, Folder};
+pub use folder::{FileName, Folder, FolderInfoBuilder};
 pub use general::General;
 pub use song_count::{ArtistAndSongCount, SongCount};
 pub use time_played::TimePlayed;
