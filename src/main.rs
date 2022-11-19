@@ -8,7 +8,7 @@ mod stores;
 mod track_plays;
 mod utils;
 
-use std::{fs, io::Write};
+use std::{fs, io::Write, sync::Arc};
 
 use clap::Parser;
 use persistence::sqlite::DatabaseConfig;
@@ -43,7 +43,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     match args.command {
         cli::Commands::Process(process_args) => {
-            process_listens(&process_args.input, SqliteStore::build(pool.clone()), &pool).await;
+            process_listens(&process_args.input, Arc::new(SqliteStore::build(pool.clone())), &pool).await;
             Ok(())
         }
         cli::Commands::Generate(generate_args) => {
@@ -334,8 +334,8 @@ async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, coun
         .unwrap();
 }
 
-async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sqlite>) {
-    let mut repository = listen_tracker_repo(1500, pool).await;
+async fn process_listens(input_folder: &str, store: Arc<SqliteStore>, pool: &Pool<Sqlite>) {
+    let mut repository = listen_tracker_repo(1500, pool, store.clone()).await;
     let streaming_files =
         fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 
@@ -355,7 +355,7 @@ async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sql
                 track_play: track_play.clone(),
                 min_listen_length: MIN_LISTEN_LENGTH,
             };
-            let tracker = repository.get(&store).await;
+            let tracker = repository.get().await;
             let handle_result = command.handle(tracker);
 
             if let Some(event) = handle_result {
@@ -371,6 +371,6 @@ async fn process_listens(input_folder: &str, store: SqliteStore, pool: &Pool<Sql
         println!("processed {}", path.display());
     }
 
-    let _ = repository.get(&store).await;
+    let _ = repository.get().await;
     repository.flush().await;
 }

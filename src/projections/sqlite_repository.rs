@@ -2,7 +2,7 @@ use sqlx::{Pool, Sqlite};
 
 use super::{build_id, listen_tracker::ListenTracker};
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::{errors::ReadError, events::EventData, stores::EventStore};
 
@@ -12,22 +12,22 @@ pub struct SqliteListenTrackerRepository {
     dirty: bool,
     buffer_count: usize,
     not_persisted_count: usize,
+    store: Arc<dyn EventStore>,
 }
 
 impl SqliteListenTrackerRepository {
     pub async fn get(
-        &mut self,
-        store: &(impl EventStore + Send + std::marker::Sync),
+        &mut self
     ) -> &ListenTracker {
         let current_version = self.listen_tracker.version;
 
-        let store_version = store.stream_version("listens".to_string()).await;
+        let store_version = self.store.stream_version("listens".to_string()).await;
 
         if current_version == store_version {
             return &self.listen_tracker;
         }
 
-        let event_stream = store
+        let event_stream = self.store
             .get_events_after("listens".to_string(), self.listen_tracker.version)
             .await
             .unwrap();
@@ -123,6 +123,7 @@ impl SqliteListenTrackerRepository {
 pub async fn listen_tracker_repo(
     buffer_count: usize,
     pool: &Pool<Sqlite>,
+    store: Arc<dyn EventStore>,
 ) -> SqliteListenTrackerRepository {
     let listen_tracker = SqliteListenTrackerRepository::read(pool).await.unwrap();
 
@@ -132,5 +133,6 @@ pub async fn listen_tracker_repo(
         dirty: false,
         buffer_count,
         not_persisted_count: 0,
+        store: store.clone(),
     }
 }
