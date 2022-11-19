@@ -1,30 +1,26 @@
 mod cli;
-mod commands;
 mod errors;
 mod events;
 mod persistence;
+mod processing;
 mod projections;
 mod track_plays;
 mod utils;
 
-use std::{fs, io::Write, sync::Arc};
+use std::{io::Write, sync::Arc};
 
 use clap::Parser;
 use persistence::sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore};
 use projections::{
     statistics::{ArtistsCounts, EventProcessor},
     statistics::{FileName, Folder},
-    ListenTrackerRepository,
 };
 use rand::Rng;
 
 use crate::{
-    commands::AddTrackPlay,
     persistence::{EventStore, FileWriter, Writer},
-    track_plays::{read_track_plays, ArtistName},
+    track_plays::ArtistName,
 };
-
-pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -38,7 +34,7 @@ async fn main() -> Result<(), std::io::Error> {
         cli::Commands::Process(process_args) => {
             let store = Arc::new(SqliteEventStore::from(pool.clone()));
             let mut repository = listen_tracker_repo(1500, &pool, store.clone()).await;
-            process_listens(
+            processing::process_listens(
                 &process_args.input,
                 Arc::new(SqliteEventStore::from(pool.clone())),
                 &mut repository,
@@ -332,48 +328,4 @@ async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, coun
         .write(&stats.top(100))
         .await
         .unwrap();
-}
-
-async fn process_listens(
-    input_folder: &str,
-    store: Arc<SqliteEventStore>,
-    repository: &mut impl ListenTrackerRepository,
-) {
-    let streaming_files =
-        fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
-
-    for entry in streaming_files {
-        let path = entry.unwrap().path().clone();
-
-        let track_plays = match read_track_plays(&path) {
-            Ok(it) => it,
-            Err(e) => {
-                println!("{:?}", e);
-                continue;
-            }
-        };
-
-        for track_play in track_plays.iter() {
-            let command = AddTrackPlay {
-                track_play: track_play.clone(),
-                min_listen_length: MIN_LISTEN_LENGTH,
-            };
-            let tracker = repository.get().await;
-            let handle_result = command.handle(tracker);
-
-            if let Some(event) = handle_result {
-                if let Err(err) = store
-                    .add_event("listens".to_string(), &event, event.version)
-                    .await
-                {
-                    println!("{:?}", err);
-                }
-            }
-        }
-
-        println!("processed {}", path.display());
-    }
-
-    let _ = repository.get().await;
-    repository.flush().await;
 }
