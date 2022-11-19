@@ -13,7 +13,7 @@ pub async fn process_listens(
     repository: &mut impl ListenTrackerRepository,
 ) {
     let streaming_files =
-        fs::read_dir(input_folder).expect(&format!("Could not read {}", &input_folder));
+        fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 
     for entry in streaming_files {
         let path = entry.unwrap().path().clone();
