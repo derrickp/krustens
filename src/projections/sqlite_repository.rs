@@ -4,7 +4,7 @@ use super::{build_id, listen_tracker::ListenTracker};
 
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{errors::ReadError, events::EventData, stores::EventStore};
+use crate::{errors::ReadError, events::EventData, persistence::EventStore};
 
 pub struct SqliteListenTrackerRepository {
     pool: Pool<Sqlite>,

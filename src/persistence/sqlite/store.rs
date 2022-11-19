@@ -3,23 +3,23 @@ use sqlx::{sqlite::SqliteRow, Pool, Row, Sqlite};
 
 use crate::{
     errors::{AddEventError, GetEventsError},
-    events::{Event, EventData},
+    events::{Event, EventData, EventStream}, persistence::EventStore,
 };
 
-use super::{event_store::EventStore, EventStream};
-
-pub struct SqliteStore {
+pub struct SqliteEventStore {
     pool: Pool<Sqlite>,
 }
 
-impl SqliteStore {
-    pub fn build(pool: Pool<Sqlite>) -> Self {
-        Self { pool }
+impl From<Pool<Sqlite>> for SqliteEventStore {
+    fn from(pool: Pool<Sqlite>) -> Self {
+        Self {
+            pool
+        }
     }
 }
 
 #[async_trait]
-impl EventStore for SqliteStore {
+impl EventStore for SqliteEventStore {
     async fn stream_version(&self, stream: String) -> u32 {
         let query =
             sqlx::query("select MAX(position) from streams where stream = $1").bind(&stream);

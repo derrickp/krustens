@@ -5,7 +5,7 @@ use crate::{
     events::Event,
 };
 
-use super::EventStream;
+use crate::events::EventStream;
 
 #[async_trait]
 pub trait EventStore {

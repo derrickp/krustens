@@ -4,14 +4,13 @@ mod errors;
 mod events;
 mod persistence;
 mod projections;
-mod stores;
 mod track_plays;
 mod utils;
 
 use std::{fs, io::Write, sync::Arc};
 
 use clap::Parser;
-use persistence::sqlite::DatabaseConfig;
+use persistence::sqlite::{DatabaseConfig, SqliteEventStore};
 use projections::{
     statistics::{ArtistsCounts, EventProcessor},
     statistics::{FileName, Folder},
@@ -20,14 +19,12 @@ use rand::Rng;
 use sqlx::{
     Pool, Sqlite,
 };
-use stores::SqliteStore;
 use track_plays::ArtistName;
 
 use crate::{
     commands::AddTrackPlay,
-    persistence::{FileWriter, Writer},
+    persistence::{FileWriter, Writer, EventStore},
     projections::listen_tracker_repo,
-    stores::EventStore,
     track_plays::read_track_plays,
 };
 
@@ -43,14 +40,14 @@ async fn main() -> Result<(), std::io::Error> {
 
     match args.command {
         cli::Commands::Process(process_args) => {
-            process_listens(&process_args.input, Arc::new(SqliteStore::build(pool.clone())), &pool).await;
+            process_listens(&process_args.input, Arc::new(SqliteEventStore::from(pool.clone())), &pool).await;
             Ok(())
         }
         cli::Commands::Generate(generate_args) => {
             generate_stats(
                 &generate_args.output,
                 generate_args.count,
-                SqliteStore::build(pool.clone()),
+                SqliteEventStore::from(pool.clone()),
                 generate_args.year,
                 generate_args.split_monthly,
             )
@@ -58,7 +55,7 @@ async fn main() -> Result<(), std::io::Error> {
             Ok(())
         }
         cli::Commands::Interactive => {
-            interactive(SqliteStore::build(pool.clone())).await;
+            interactive(SqliteEventStore::from(pool.clone())).await;
             Ok(())
         }
     }
@@ -174,7 +171,7 @@ fn prompt_artist_songs(processor: &EventProcessor) -> Vec<String> {
         .unwrap_or_default()
 }
 
-async fn interactive(store: SqliteStore) {
+async fn interactive(store: SqliteEventStore) {
     println!("Loading...");
     let mut processor = EventProcessor::default();
     let event_stream = store.get_events("listens".to_string()).await.unwrap();
@@ -213,7 +210,7 @@ async fn interactive(store: SqliteStore) {
 async fn generate_stats(
     output_folder: &str,
     count: usize,
-    store: SqliteStore,
+    store: SqliteEventStore,
     year: Option<i32>,
     split_monthly: bool,
 ) {
@@ -228,7 +225,7 @@ async fn generate_stats(
 async fn generate_all_stats(
     output_folder: &str,
     count: usize,
-    store: SqliteStore,
+    store: SqliteEventStore,
     split_monthly: bool,
 ) {
     let folder = Folder {
@@ -274,7 +271,7 @@ async fn generate_all_stats(
 async fn generate_stats_for_single_year(
     output_folder: &str,
     count: usize,
-    store: SqliteStore,
+    store: SqliteEventStore,
     year: i32,
     split_monthly: bool,
 ) {
@@ -334,7 +331,7 @@ async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, coun
         .unwrap();
 }
 
-async fn process_listens(input_folder: &str, store: Arc<SqliteStore>, pool: &Pool<Sqlite>) {
+async fn process_listens(input_folder: &str, store: Arc<SqliteEventStore>, pool: &Pool<Sqlite>) {
     let mut repository = listen_tracker_repo(1500, pool, store.clone()).await;
     let streaming_files =
         fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
