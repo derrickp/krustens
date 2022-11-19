@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::Datelike;
+use chrono::{Datelike, NaiveDate};
 
 use crate::{
     events::{Event, EventData},
@@ -8,11 +8,7 @@ use crate::{
     utils::parse_formatted_end_time,
 };
 
-use super::{
-    calendar_counts::{CalendarDay, YearCounts},
-    song_counter::ArtistSongCounter,
-    ArtistsCounts,
-};
+use super::{calendar_counts::YearCounts, song_counter::ArtistSongCounter, ArtistsCounts};
 
 #[derive(Default)]
 pub struct EventProcessor {
@@ -21,6 +17,13 @@ pub struct EventProcessor {
 }
 
 impl EventProcessor {
+    pub fn artists_on_day(&self, date: NaiveDate) -> Vec<ArtistSongCounter> {
+        self.years
+            .get(&date.year())
+            .map(|year_count| year_count.artists_on_day(&date))
+            .unwrap_or_default()
+    }
+
     pub fn year_counts(&self) -> Vec<&YearCounts> {
         self.years.values().collect()
     }
@@ -37,20 +40,15 @@ impl EventProcessor {
         match &event.data {
             EventData::TrackPlayAdded(listen) => {
                 let calendar_day_result =
-                    parse_formatted_end_time(listen.end_time.as_str()).map(|e| CalendarDay {
-                        year: e.year(),
-                        month: e.month(),
-                        day: e.day(),
-                        weekday: e.weekday(),
-                    });
+                    parse_formatted_end_time(listen.end_time.as_str()).map(|e| e.date());
 
-                if let Ok(calendar_day) = calendar_day_result {
+                if let Ok(date) = calendar_day_result {
                     let year_counts = self
                         .years
-                        .entry(calendar_day.year)
-                        .or_insert_with(|| YearCounts::from(&calendar_day));
+                        .entry(date.year())
+                        .or_insert_with(|| YearCounts::from(&date));
                     year_counts.add_song_play(
-                        &calendar_day,
+                        &date,
                         &ArtistName(listen.artist_name.clone()),
                         &listen.track_name,
                         listen.ms_played,
