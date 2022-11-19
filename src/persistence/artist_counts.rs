@@ -1,6 +1,6 @@
 use crate::projections::statistics::{ArtistsCounts, FileName, Folder};
 
-use super::{FileWriter, Writer};
+use super::{fs::FileWriter, Writer};
 
 pub async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, count: usize) {
     stats_folder.create_if_necessary();

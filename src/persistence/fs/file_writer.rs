@@ -6,9 +6,7 @@ use std::{
 use async_trait::async_trait;
 use serde::Serialize;
 
-use crate::errors::WriteError;
-
-use super::writer::Writer;
+use crate::{errors::WriteError, persistence::Writer};
 
 pub enum FileType {
     Yaml,
