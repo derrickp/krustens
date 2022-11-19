@@ -3,7 +3,14 @@ use serde::Serialize;
 
 use crate::errors::WriteError;
 
+use super::Format;
+
 #[async_trait]
-pub trait Writer<T: Serialize> {
-    async fn write(&self, value: &T) -> Result<bool, WriteError>;
+pub trait Writer {
+    async fn write<T: Serialize + Sync>(
+        &self,
+        value: &T,
+        name: &str,
+        format: Format,
+    ) -> Result<bool, WriteError>;
 }

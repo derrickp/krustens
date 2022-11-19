@@ -1,24 +1,26 @@
-use crate::projections::statistics::{ArtistsCounts, FileName, Folder};
+use crate::projections::statistics::{ArtistsCounts, FileName};
 
-use super::{fs::FileWriter, Writer};
+use super::{Format, Writer};
 
-pub async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, count: usize) {
-    stats_folder.create_if_necessary();
-
-    FileWriter::yaml_writer(stats_folder.file_name(&FileName::General))
-        .write(&stats.general_stats(count))
+pub async fn write_artists_counts(writer: impl Writer, stats: &ArtistsCounts, count: usize) {
+    writer
+        .write(
+            &stats.general_stats(count),
+            &FileName::General.to_string(),
+            Format::Yaml,
+        )
         .await
         .unwrap();
-    FileWriter::from(stats_folder.file_name(&FileName::Complete))
-        .write(&stats.all())
+    writer
+        .write(&stats.all(), &FileName::Complete.to_string(), Format::Json)
         .await
         .unwrap();
-    FileWriter::from(stats_folder.file_name(&FileName::Top50))
-        .write(&stats.top(50))
+    writer
+        .write(&stats.top(50), &FileName::Top50.to_string(), Format::Json)
         .await
         .unwrap();
-    FileWriter::from(stats_folder.file_name(&FileName::Top100))
-        .write(&stats.top(100))
+    writer
+        .write(&stats.top(100), &FileName::Top100.to_string(), Format::Json)
         .await
         .unwrap();
 }

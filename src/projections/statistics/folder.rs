@@ -1,6 +1,8 @@
 use std::{fs::create_dir_all, path::Path};
 
-pub struct Folder {
+use crate::persistence::fs::Folder;
+
+pub struct StatisticsFolder {
     pub output_folder: String,
     pub year: Option<i32>,
     pub month: Option<u32>,
@@ -14,8 +16,8 @@ pub struct FolderInfoBuilder {
 }
 
 impl FolderInfoBuilder {
-    pub fn build(&self) -> Folder {
-        Folder {
+    pub fn build(&self) -> StatisticsFolder {
+        StatisticsFolder {
             output_folder: self
                 .root_path
                 .to_owned()
@@ -62,36 +64,39 @@ impl ToString for FileName {
     }
 }
 
-impl Folder {
-    pub fn builder() -> FolderInfoBuilder {
-        FolderInfoBuilder::default()
-    }
-    pub fn file_name(&self, file: &FileName) -> String {
-        match (self.year, self.month) {
-            (None, None) | (None, Some(_)) => {
-                format!("{}/{}", self.output_folder, file.to_string())
-            }
-            (Some(year), None) => self.year_file(year, file),
-            (Some(year), Some(month)) => self.year_month_file(year, month, file),
+impl Folder for StatisticsFolder {
+    fn create_if_necessary(&self) {
+        if !Path::new(&self.path()).exists() {
+            create_dir_all(self.path()).unwrap()
         }
     }
 
-    pub fn folder_name(&self) -> String {
+    fn full_path(&self, file_name: &str) -> String {
+        match (self.year, self.month) {
+            (None, None) | (None, Some(_)) => {
+                format!("{}/{}", self.output_folder, file_name)
+            }
+            (Some(year), None) => self.year_file(year, file_name),
+            (Some(year), Some(month)) => self.year_month_file(year, month, file_name),
+        }
+    }
+
+    fn path(&self) -> String {
         match (self.year, self.month) {
             (None, None) | (None, Some(_)) => self.output_folder.to_string(),
             (Some(year), None) => self.year_folder(year),
             (Some(year), Some(month)) => self.year_month_folder(year, month),
         }
     }
+}
 
-    pub fn create_if_necessary(&self) {
-        if !Path::new(&self.folder_name()).exists() {
-            create_dir_all(self.folder_name()).unwrap()
-        }
+impl StatisticsFolder {
+    pub fn builder() -> FolderInfoBuilder {
+        FolderInfoBuilder::default()
     }
 
-    fn year_file(&self, year: i32, file: &FileName) -> String {
-        format!("{}/{}", self.year_folder(year), file.to_string())
+    fn year_file(&self, year: i32, file: &str) -> String {
+        format!("{}/{}", self.year_folder(year), file)
     }
 
     fn year_folder(&self, year: i32) -> String {
@@ -102,11 +107,7 @@ impl Folder {
         format!("{}/{}_{}", self.output_folder, year, month)
     }
 
-    fn year_month_file(&self, year: i32, month: u32, file: &FileName) -> String {
-        format!(
-            "{}/{}",
-            self.year_month_folder(year, month),
-            file.to_string()
-        )
+    fn year_month_file(&self, year: i32, month: u32, file: &str) -> String {
+        format!("{}/{}", self.year_month_folder(year, month), file)
     }
 }

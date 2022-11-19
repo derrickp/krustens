@@ -6,52 +6,47 @@ use std::{
 use async_trait::async_trait;
 use serde::Serialize;
 
-use crate::{errors::WriteError, persistence::Writer};
+use crate::{
+    errors::WriteError,
+    persistence::{Format, Writer},
+};
 
-pub enum FileType {
-    Yaml,
-    Json,
-}
+use super::folder::Folder;
 
 pub struct FileWriter {
-    path: String,
-    file_type: FileType,
+    pub folder: Box<dyn Folder + Sync>,
 }
 
-impl From<String> for FileWriter {
-    fn from(path: String) -> Self {
-        Self {
-            path,
-            file_type: FileType::Json,
-        }
-    }
-}
-
-impl FileWriter {
-    pub fn yaml_writer(path: String) -> Self {
-        Self {
-            path,
-            file_type: FileType::Yaml,
-        }
+impl From<Box<dyn Folder + Sync>> for FileWriter {
+    fn from(folder: Box<dyn Folder + Sync>) -> Self {
+        Self { folder }
     }
 }
 
 #[async_trait]
-impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
-    async fn write(&self, value: &T) -> Result<bool, WriteError> {
-        let file = match File::create(self.path.clone()) {
+impl Writer for FileWriter {
+    async fn write<T: Serialize + Sync>(
+        &self,
+        value: &T,
+        name: &str,
+        format: Format,
+    ) -> Result<bool, WriteError> {
+        self.folder.create_if_necessary();
+
+        let full_path = self.folder.full_path(name);
+        let file = match File::create(&full_path) {
             Ok(it) => it,
             Err(e) => {
                 return Err(WriteError::CannotCreateFile {
-                    path: self.path.to_string(),
+                    path: full_path,
                     message: e.to_string(),
                 })
             }
         };
         let mut writer = BufWriter::new(file);
 
-        match self.file_type {
-            FileType::Json => match serde_json::to_writer_pretty(&mut writer, value) {
+        match format {
+            Format::Json => match serde_json::to_writer_pretty(&mut writer, value) {
                 Ok(_) => {}
                 Err(e) => {
                     return Err(WriteError::FailedToSerializeJson {
@@ -59,7 +54,7 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
                     })
                 }
             },
-            FileType::Yaml => match serde_yaml::to_writer(&mut writer, value) {
+            Format::Yaml => match serde_yaml::to_writer(&mut writer, value) {
                 Ok(_) => {}
                 Err(e) => {
                     return Err(WriteError::FailedToSerializeYaml {
@@ -72,7 +67,7 @@ impl<T: Serialize + std::marker::Sync> Writer<T> for FileWriter {
         match writer.flush() {
             Ok(_) => Ok(true),
             Err(e) => Err(WriteError::CannotWriteToFile {
-                path: self.path.to_string(),
+                path: full_path,
                 message: e.to_string(),
             }),
         }
