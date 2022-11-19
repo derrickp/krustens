@@ -8,16 +8,16 @@ mod stores;
 mod track_plays;
 mod utils;
 
-use std::{fs, io::Write, str::FromStr};
+use std::{fs, io::Write};
 
 use clap::Parser;
+use persistence::sqlite::DatabaseConfig;
 use projections::{
     statistics::{ArtistsCounts, EventProcessor},
     statistics::{FileName, Folder},
 };
 use rand::Rng;
 use sqlx::{
-    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     Pool, Sqlite,
 };
 use stores::SqliteStore;
@@ -37,32 +37,8 @@ pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
 async fn main() -> Result<(), std::io::Error> {
     let database_file = "krustens.sqlite";
     let database_url = format!("sqlite://{}", database_file);
-
-    let connection_options = SqliteConnectOptions::from_str(&database_url)
-        .unwrap()
-        .create_if_missing(true)
-        .journal_mode(SqliteJournalMode::Wal)
-        .synchronous(SqliteSynchronous::Normal);
-
-    let pool = SqlitePoolOptions::new()
-        .connect_with(connection_options)
-        .await
-        .unwrap();
-    sqlx::migrate!().run(&pool).await.unwrap();
-
-    sqlx::query("pragma temp_store = memory;")
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query("pragma mmap_size = 30000000000;")
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query("pragma page_size = 4096;")
-        .execute(&pool)
-        .await
-        .unwrap();
-
+    let db_config = DatabaseConfig::from(database_url);
+    let pool = persistence::sqlite::build_pool_and_migrate(db_config).await;
     let args = cli::Arguments::parse();
 
     match args.command {
