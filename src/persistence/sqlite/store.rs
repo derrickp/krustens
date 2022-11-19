@@ -3,7 +3,8 @@ use sqlx::{sqlite::SqliteRow, Pool, Row, Sqlite};
 
 use crate::{
     errors::{AddEventError, GetEventsError},
-    events::{Event, EventData, EventStream}, persistence::EventStore,
+    events::{Event, EventData, EventStream},
+    persistence::EventStore,
 };
 
 pub struct SqliteEventStore {
@@ -12,9 +13,7 @@ pub struct SqliteEventStore {
 
 impl From<Pool<Sqlite>> for SqliteEventStore {
     fn from(pool: Pool<Sqlite>) -> Self {
-        Self {
-            pool
-        }
+        Self { pool }
     }
 }
 

@@ -16,16 +16,13 @@ use projections::{
     statistics::{FileName, Folder},
 };
 use rand::Rng;
-use sqlx::{
-    Pool, Sqlite,
-};
-use track_plays::ArtistName;
+use sqlx::{Pool, Sqlite};
 
 use crate::{
     commands::AddTrackPlay,
-    persistence::{FileWriter, Writer, EventStore},
+    persistence::{EventStore, FileWriter, Writer},
     projections::listen_tracker_repo,
-    track_plays::read_track_plays,
+    track_plays::{read_track_plays, ArtistName},
 };
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
@@ -40,7 +37,12 @@ async fn main() -> Result<(), std::io::Error> {
 
     match args.command {
         cli::Commands::Process(process_args) => {
-            process_listens(&process_args.input, Arc::new(SqliteEventStore::from(pool.clone())), &pool).await;
+            process_listens(
+                &process_args.input,
+                Arc::new(SqliteEventStore::from(pool.clone())),
+                &pool,
+            )
+            .await;
             Ok(())
         }
         cli::Commands::Generate(generate_args) => {

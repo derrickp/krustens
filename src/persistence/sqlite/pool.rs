@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use sqlx::{sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous}, Pool, Sqlite};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
+    Pool, Sqlite,
+};
 
 pub async fn build_pool_and_migrate(config: super::DatabaseConfig) -> Pool<Sqlite> {
     let connection_options = SqliteConnectOptions::from_str(&config.database_url)

@@ -16,9 +16,7 @@ pub struct SqliteListenTrackerRepository {
 }
 
 impl SqliteListenTrackerRepository {
-    pub async fn get(
-        &mut self
-    ) -> &ListenTracker {
+    pub async fn get(&mut self) -> &ListenTracker {
         let current_version = self.listen_tracker.version;
 
         let store_version = self.store.stream_version("listens".to_string()).await;
@@ -27,7 +25,8 @@ impl SqliteListenTrackerRepository {
             return &self.listen_tracker;
         }
 
-        let event_stream = self.store
+        let event_stream = self
+            .store
             .get_events_after("listens".to_string(), self.listen_tracker.version)
             .await
             .unwrap();
