@@ -150,6 +150,38 @@ fn prompt_random_artist(processor: &EventProcessor) -> Vec<String> {
         .unwrap_or_else(|| vec!["No listens for that year".to_string()])
 }
 
+fn prompt_artists_on_day(processor: &EventProcessor) -> Vec<String> {
+    let year = prompt("What year to look in? > ")
+        .parse::<i32>()
+        .expect("Error: Not a valid number");
+    let month = prompt("What month do you want to look in (1-12)? > ")
+        .parse::<u32>()
+        .ok()
+        .filter(|m| (1..=12).contains(m))
+        .expect("Error: Not a valid month");
+    let day = prompt("What day of the month? > ")
+        .parse::<u32>()
+        .ok()
+        .filter(|d| (1..=31).contains(d))
+        .expect("Error: Not a valid day");
+
+    chrono::NaiveDate::from_ymd_opt(year, month, day)
+        .map(|date| {
+            let names = processor
+                .artists_on_day(date)
+                .into_iter()
+                .map(|artist_counter| artist_counter.total_plays_display())
+                .collect::<Vec<String>>();
+
+            if names.is_empty() {
+                vec!["No artists listened to on that day".to_string()]
+            } else {
+                names
+            }
+        })
+        .unwrap_or_else(|| vec!["Error: Invalid date".to_string()])
+}
+
 fn prompt_artist_songs(processor: &EventProcessor) -> Vec<String> {
     let artist_name = ArtistName(prompt("What artist do you want to look for? > "));
 
@@ -179,7 +211,7 @@ async fn interactive(store: SqliteStore) {
 
         if input == "q" {
             break;
-        } else if input == "random artist" {
+        } else if input == "random artists" {
             let artist_names = prompt_random_artist(&processor);
             for name in artist_names {
                 println!(">> {}", name);
@@ -189,9 +221,15 @@ async fn interactive(store: SqliteStore) {
             for name in song_names {
                 println!(">> {}", name);
             }
+        } else if input == "artists on day" {
+            let names = prompt_artists_on_day(&processor);
+            for name in names {
+                println!(">> {}", name);
+            }
         } else if input == "c" {
-            println!(">> random artist -> search for a random artist from your listening history.");
-            println!(">> artist songs -> list out all of the songs for a single artist from your listening history.");
+            println!(">> random artists -> search for a random artist from your listening history");
+            println!(">> artist songs -> list out all of the songs for a single artist from your listening history");
+            println!(">> artists on day -> list all artists listened to on a specific day")
         }
     }
 }
