@@ -10,18 +10,17 @@ mod utils;
 use std::{fs, io::Write, sync::Arc};
 
 use clap::Parser;
-use persistence::sqlite::{DatabaseConfig, SqliteEventStore};
+use persistence::sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore};
 use projections::{
     statistics::{ArtistsCounts, EventProcessor},
     statistics::{FileName, Folder},
+    ListenTrackerRepository,
 };
 use rand::Rng;
-use sqlx::{Pool, Sqlite};
 
 use crate::{
     commands::AddTrackPlay,
     persistence::{EventStore, FileWriter, Writer},
-    projections::listen_tracker_repo,
     track_plays::{read_track_plays, ArtistName},
 };
 
@@ -37,10 +36,12 @@ async fn main() -> Result<(), std::io::Error> {
 
     match args.command {
         cli::Commands::Process(process_args) => {
+            let store = Arc::new(SqliteEventStore::from(pool.clone()));
+            let mut repository = listen_tracker_repo(1500, &pool, store.clone()).await;
             process_listens(
                 &process_args.input,
                 Arc::new(SqliteEventStore::from(pool.clone())),
-                &pool,
+                &mut repository,
             )
             .await;
             Ok(())
@@ -333,8 +334,11 @@ async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, coun
         .unwrap();
 }
 
-async fn process_listens(input_folder: &str, store: Arc<SqliteEventStore>, pool: &Pool<Sqlite>) {
-    let mut repository = listen_tracker_repo(1500, pool, store.clone()).await;
+async fn process_listens(
+    input_folder: &str,
+    store: Arc<SqliteEventStore>,
+    repository: &mut impl ListenTrackerRepository,
+) {
     let streaming_files =
         fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
 

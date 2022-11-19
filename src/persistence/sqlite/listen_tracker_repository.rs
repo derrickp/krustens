@@ -1,6 +1,6 @@
 use sqlx::{Pool, Sqlite};
 
-use super::{build_id, listen_tracker::ListenTracker};
+use crate::projections::{build_id, ListenTracker, ListenTrackerRepository};
 
 use std::{collections::HashSet, sync::Arc};
 
@@ -12,11 +12,12 @@ pub struct SqliteListenTrackerRepository {
     dirty: bool,
     buffer_count: usize,
     not_persisted_count: usize,
-    store: Arc<dyn EventStore>,
+    store: Arc<dyn EventStore + Send + Sync>,
 }
 
-impl SqliteListenTrackerRepository {
-    pub async fn get(&mut self) -> &ListenTracker {
+#[async_trait::async_trait]
+impl ListenTrackerRepository for SqliteListenTrackerRepository {
+    async fn get(&mut self) -> &ListenTracker {
         let current_version = self.listen_tracker.version;
 
         let store_version = self.store.stream_version("listens".to_string()).await;
@@ -58,7 +59,7 @@ impl SqliteListenTrackerRepository {
         &self.listen_tracker
     }
 
-    pub async fn flush(&mut self) {
+    async fn flush(&mut self) {
         if !self.dirty {
             return;
         }
@@ -122,7 +123,7 @@ impl SqliteListenTrackerRepository {
 pub async fn listen_tracker_repo(
     buffer_count: usize,
     pool: &Pool<Sqlite>,
-    store: Arc<dyn EventStore>,
+    store: Arc<dyn EventStore + Send + Sync>,
 ) -> SqliteListenTrackerRepository {
     let listen_tracker = SqliteListenTrackerRepository::read(pool).await.unwrap();
 
