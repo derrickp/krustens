@@ -1,6 +1,7 @@
 mod cli;
 mod errors;
 mod events;
+mod generation;
 mod persistence;
 mod processing;
 mod projections;
@@ -10,17 +11,12 @@ mod utils;
 use std::{io::Write, sync::Arc};
 
 use clap::Parser;
+use generation::generate_stats;
 use persistence::sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore};
-use projections::{
-    statistics::{ArtistsCounts, EventProcessor},
-    statistics::{FileName, Folder},
-};
+use projections::statistics::EventProcessor;
 use rand::Rng;
 
-use crate::{
-    persistence::{EventStore, FileWriter, Writer},
-    track_plays::ArtistName,
-};
+use crate::{persistence::EventStore, track_plays::ArtistName};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -46,7 +42,7 @@ async fn main() -> Result<(), std::io::Error> {
             generate_stats(
                 &generate_args.output,
                 generate_args.count,
-                SqliteEventStore::from(pool.clone()),
+                Arc::new(SqliteEventStore::from(pool.clone())),
                 generate_args.year,
                 generate_args.split_monthly,
             )
@@ -204,128 +200,4 @@ async fn interactive(store: SqliteEventStore) {
             println!(">> artists on day -> list all artists listened to on a specific day")
         }
     }
-}
-
-async fn generate_stats(
-    output_folder: &str,
-    count: usize,
-    store: SqliteEventStore,
-    year: Option<i32>,
-    split_monthly: bool,
-) {
-    match year {
-        Some(it) => {
-            generate_stats_for_single_year(output_folder, count, store, it, split_monthly).await
-        }
-        _ => generate_all_stats(output_folder, count, store, split_monthly).await,
-    }
-}
-
-async fn generate_all_stats(
-    output_folder: &str,
-    count: usize,
-    store: SqliteEventStore,
-    split_monthly: bool,
-) {
-    let folder = Folder {
-        output_folder: output_folder.to_string(),
-        year: None,
-        month: None,
-    };
-    let event_stream = store.get_events("listens".to_string()).await.unwrap();
-    let mut processor = EventProcessor::default();
-
-    for event in event_stream.events.iter() {
-        processor.process_event(event);
-    }
-
-    write_artists_counts(&folder, &processor.artists_counts, count).await;
-
-    if split_monthly {
-        for year_count in processor.year_counts() {
-            let year_folder = Folder {
-                output_folder: output_folder.to_string(),
-                year: Some(year_count.year),
-                month: None,
-            };
-            year_folder.create_if_necessary();
-            write_artists_counts(&year_folder, &year_count.artists_counts, count).await;
-
-            if split_monthly {
-                for month_count in year_count.month_counts() {
-                    let folder = Folder {
-                        output_folder: output_folder.to_string(),
-                        year: Some(year_count.year),
-                        month: Some(month_count.month),
-                    };
-
-                    folder.create_if_necessary();
-                    write_artists_counts(&folder, &month_count.artists_counts, count).await;
-                }
-            }
-        }
-    }
-}
-
-async fn generate_stats_for_single_year(
-    output_folder: &str,
-    count: usize,
-    store: SqliteEventStore,
-    year: i32,
-    split_monthly: bool,
-) {
-    let event_stream = store.get_events("listens".to_string()).await.unwrap();
-
-    let mut processor = EventProcessor::default();
-    for event in event_stream.events.iter() {
-        processor.process_event(event);
-    }
-
-    for year_count in processor
-        .year_counts()
-        .iter()
-        .filter(|year_count| year_count.year == year)
-    {
-        let year_folder = Folder {
-            output_folder: output_folder.to_string(),
-            year: Some(year),
-            month: None,
-        };
-        year_folder.create_if_necessary();
-        write_artists_counts(&year_folder, &year_count.artists_counts, count).await;
-
-        if split_monthly {
-            for month_count in year_count.month_counts() {
-                let folder = Folder {
-                    output_folder: output_folder.to_string(),
-                    year: Some(year_count.year),
-                    month: Some(month_count.month),
-                };
-
-                folder.create_if_necessary();
-                write_artists_counts(&folder, &month_count.artists_counts, count).await;
-            }
-        }
-    }
-}
-
-async fn write_artists_counts(stats_folder: &Folder, stats: &ArtistsCounts, count: usize) {
-    stats_folder.create_if_necessary();
-
-    FileWriter::yaml_writer(stats_folder.file_name(&FileName::General))
-        .write(&stats.general_stats(count))
-        .await
-        .unwrap();
-    FileWriter::from(stats_folder.file_name(&FileName::Complete))
-        .write(&stats.all())
-        .await
-        .unwrap();
-    FileWriter::from(stats_folder.file_name(&FileName::Top50))
-        .write(&stats.top(50))
-        .await
-        .unwrap();
-    FileWriter::from(stats_folder.file_name(&FileName::Top100))
-        .write(&stats.top(100))
-        .await
-        .unwrap();
 }
