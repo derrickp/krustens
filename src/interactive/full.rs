@@ -20,7 +20,7 @@ use crate::{
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{app::AppCommandName, AppMode, AppState};
+use super::{app_state::AppCommandName, AppMode, AppState};
 
 pub async fn full_ui(store: Arc<impl EventStore>) -> Result<(), InteractiveError> {
     println!("Loading...");
