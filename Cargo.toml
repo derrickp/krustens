@@ -19,11 +19,16 @@ categories = ["command-line-utilities"]
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
+crossterm = "0.25.0"
 csv = "1.1"
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite", "migrate" ] }
+strum = "0.24"
+strum_macros = "0.24"
 thiserror = "1.0"
-tokio = { version = "1.21", features = ["full"] }
+tokio = { version = "1.22", features = ["full"] }
+tui = "0.19.0"
+unicode-width = "0.1.10"
