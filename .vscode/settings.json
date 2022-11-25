@@ -1,7 +1,12 @@
 {
   "editor.detectIndentation": false,
   "editor.tabSize": 4,
-  "cSpell.words": ["chrono", "Datelike", "krustens"],
+  "cSpell.words": [
+    "chrono",
+    "Crossterm",
+    "Datelike",
+    "krustens"
+],
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,
