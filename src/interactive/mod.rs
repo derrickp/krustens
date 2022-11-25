@@ -1,5 +1,7 @@
-mod basic;
-mod prompt;
+mod app;
+mod app_message_set;
+mod full;
 
-pub use basic::basic_interactive;
-pub use prompt::{prompt, prompt_artist_songs, prompt_artists_on_day, prompt_random_artist};
+pub use app::{AppMode, AppState};
+pub use app_message_set::AppMessageSet;
+pub use full::full_ui;

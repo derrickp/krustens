@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use clap::Parser;
 use generation::generate_stats;
-use interactive::basic_interactive;
+use interactive::full_ui;
 use persistence::sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore};
 
 #[tokio::main]
@@ -48,7 +48,9 @@ async fn main() -> Result<(), std::io::Error> {
             Ok(())
         }
         cli::Commands::Interactive => {
-            basic_interactive(Arc::new(SqliteEventStore::from(pool.clone()))).await;
+            full_ui(Arc::new(SqliteEventStore::from(pool.clone())))
+                .await
+                .unwrap();
             Ok(())
         }
     }
