@@ -37,7 +37,7 @@ impl AddTrackPlay {
             return None;
         }
 
-        if listen.is_skipped_by_percent() || listen.play_time() <= self.min_listen_length {
+        if listen.is_skipped() || listen.play_time() <= self.min_listen_length {
             Some(EventData::TrackPlayIgnored(TrackSkipped {
                 artist_name: listen.artist_name.clone(),
                 track_name: listen.track_name.clone(),

@@ -51,6 +51,7 @@ fn parse_json(path: &PathBuf) -> Result<Vec<TrackPlay>, ReadError> {
         .map(|spotify_listens: Vec<Spotify>| {
             spotify_listens
                 .into_iter()
+                .filter(|play| play.is_valid())
                 .map(TrackPlay::Spotify)
                 .collect()
         })
@@ -109,6 +110,8 @@ fn parse_csv(path: &PathBuf) -> Result<Vec<TrackPlay>, ReadError> {
 mod tests {
     use std::path::PathBuf;
 
+    use crate::track_plays::TrackPlay;
+
     use super::read_track_plays;
 
     #[test]
@@ -121,6 +124,23 @@ mod tests {
         let plays = read_track_plays(&path).unwrap();
         println!("{:?}", &plays);
         assert_eq!(1, plays.len());
+    }
+
+    #[test]
+    fn parse_json_from_full_history() {
+        let mut path = PathBuf::new();
+        path.push("./fixtures");
+        path.push("spotify_full_history");
+        path.set_extension("json");
+
+        let plays = read_track_plays(&path).unwrap();
+        println!("{:?}", &plays);
+
+        let play = match plays.get(0).unwrap() {
+            TrackPlay::Spotify(it) => it,
+            TrackPlay::AppleMusicPlayActivity(_) => todo!(),
+        };
+        assert_eq!("Brimstone", play.track_name.clone().unwrap());
     }
 
     #[test]

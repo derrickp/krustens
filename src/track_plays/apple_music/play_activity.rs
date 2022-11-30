@@ -30,6 +30,13 @@ impl PlayActivity {
     pub fn is_end_event(&self) -> bool {
         self.event_type.eq_ignore_ascii_case("play_end")
     }
+
+    pub fn is_skipped_by_percent(&self) -> bool {
+        self.play_duration_ms
+            .zip(self.media_duration_ms)
+            .map(|(ms_played, track_ms)| (ms_played as f64 / track_ms as f64) < 0.1)
+            .unwrap_or(false)
+    }
 }
 
 impl TryInto<Normalized> for PlayActivity {
@@ -55,6 +62,7 @@ impl TryInto<Normalized> for PlayActivity {
         Ok(Normalized {
             end_time,
             ms_played,
+            skipped: Some(self.is_skipped_by_percent()),
             artist_name: self.artist_name,
             track_name: self.song_name,
             track_ms: self.media_duration_ms,

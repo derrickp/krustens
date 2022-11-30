@@ -7,6 +7,7 @@ pub struct Normalized {
     pub service_hint: String,
     pub ms_played: Option<u64>,
     pub track_ms: Option<u64>,
+    pub skipped: Option<bool>,
 }
 
 impl Normalized {
@@ -16,6 +17,10 @@ impl Normalized {
 
     pub fn play_time(&self) -> u64 {
         self.ms_played.unwrap_or_default()
+    }
+
+    pub fn is_skipped(&self) -> bool {
+        self.skipped.unwrap_or_default() || self.is_skipped_by_percent()
     }
 
     pub fn is_skipped_by_percent(&self) -> bool {
@@ -41,6 +46,7 @@ mod tests {
             service_hint: "apple_music".to_string(),
             ms_played: Some(330994),
             track_ms: Some(357000),
+            skipped: Some(false),
         };
 
         assert!(!normalized.is_skipped_by_percent());
