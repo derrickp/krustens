@@ -62,7 +62,7 @@ impl AppState {
                     processor,
                 ),
                 AppCommandParameters::ArtistSongs { name } => {
-                    self.run_artist_songs(&name.unwrap_or_else(|| "".to_string()), processor);
+                    self.run_artist_songs(&name.unwrap_or_default(), processor);
                 }
                 AppCommandParameters::ArtistsOnDay { date } => {
                     self.run_artists_on_day(date.unwrap_or_default(), processor);
@@ -227,17 +227,15 @@ impl AppState {
                 optional,
                 description: _,
             } => {
-                if let Some(year) = text.parse::<i32>().ok() {
+                if let Ok(year) = text.parse::<i32>() {
                     self.add_year_parameter(year);
                     Ok(())
+                } else if !optional {
+                    Err(InteractiveError::RequiredParameterNotSet {
+                        name: "year".to_string(),
+                    })
                 } else {
-                    if !optional {
-                        Err(InteractiveError::RequiredParameterNotSet {
-                            name: "year".to_string(),
-                        })
-                    } else {
-                        Ok(())
-                    }
+                    Ok(())
                 }
             }
             CommandParameterSpec::Month {
@@ -247,14 +245,12 @@ impl AppState {
                 if let Some(month) = text.parse::<u32>().ok().filter(|m| (&1..=&12).contains(&m)) {
                     self.add_month_parameter(month);
                     Ok(())
+                } else if !optional {
+                    Err(InteractiveError::RequiredParameterNotSet {
+                        name: "month".to_string(),
+                    })
                 } else {
-                    if !optional {
-                        Err(InteractiveError::RequiredParameterNotSet {
-                            name: "month".to_string(),
-                        })
-                    } else {
-                        Ok(())
-                    }
+                    Ok(())
                 }
             }
             CommandParameterSpec::MinListens {
