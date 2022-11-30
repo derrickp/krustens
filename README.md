@@ -5,7 +5,7 @@ Get statistics from your listening history. Currently only supports Spotify, but
 ## Usage
 **Required:** At least one file downloaded from Spotify or Apple Music of your listening history.
 
-For Spotify it can be downloaded from the `Account` -> `Privacy` page after requesting an export of your data. In the resulting export it will be a file named similar to `StreamingHistory0.json`. This program can use any number of them.
+For Spotify it can be downloaded from the `Account` -> `Privacy` page after requesting an export of your data. Krustens can use either the history file from the `Account Data` (the listens from the last year), or the extended streaming history. In the resulting export it will be a file named similar to `StreamingHistory0.json` or `endsong_0.json`. This program can use any number of these.
 
 For Apple Music you can request this data using Apple's https://privacy.apple.com/account page and specifically requesting the media information. There should be a file that has `Track Play History` in the name. This is currently the only file supported by `krustens`.
 
