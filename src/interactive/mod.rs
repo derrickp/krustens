@@ -1,3 +1,4 @@
+mod app;
 mod app_message_set;
 mod app_mode;
 mod app_state;
@@ -5,6 +6,7 @@ mod command_name;
 mod command_parameters;
 mod full;
 
+pub use app::App;
 pub use app_message_set::AppMessageSet;
 pub use app_mode::AppMode;
 pub use app_state::AppState;

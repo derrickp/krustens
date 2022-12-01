@@ -15,6 +15,7 @@ use clap::Parser;
 use generation::generate_stats;
 use interactive::full_ui;
 use persistence::sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore};
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -27,11 +28,13 @@ async fn main() -> Result<(), std::io::Error> {
     match args.command {
         cli::Commands::Process(process_args) => {
             let store = Arc::new(SqliteEventStore::from(pool.clone()));
-            let mut repository = listen_tracker_repo(1500, &pool, store.clone()).await;
+            let repository = Arc::new(Mutex::new(
+                listen_tracker_repo(1500, &pool, store.clone()).await,
+            ));
             processing::process_listens(
                 &process_args.input,
                 Arc::new(SqliteEventStore::from(pool.clone())),
-                &mut repository,
+                repository,
             )
             .await;
             Ok(())
@@ -48,9 +51,11 @@ async fn main() -> Result<(), std::io::Error> {
             Ok(())
         }
         cli::Commands::Interactive => {
-            full_ui(Arc::new(SqliteEventStore::from(pool.clone())))
-                .await
-                .unwrap();
+            let store = Arc::new(SqliteEventStore::from(pool.clone()));
+            let repository = Arc::new(Mutex::new(
+                listen_tracker_repo(1500, &pool, store.clone()).await,
+            ));
+            full_ui(store, repository).await.unwrap();
             Ok(())
         }
     }

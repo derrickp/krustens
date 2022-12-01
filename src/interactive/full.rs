@@ -1,10 +1,11 @@
-use std::{io, str::FromStr, sync::Arc};
+use std::{io, sync::Arc, time::Duration};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, poll, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use tokio::sync::Mutex;
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -15,20 +16,22 @@ use tui::{
 };
 
 use crate::{
-    errors::InteractiveError, persistence::EventStore, projections::statistics::EventProcessor,
+    errors::InteractiveError, persistence::EventStore, projections::ListenTrackerRepository,
 };
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{app_state::AppCommandName, AppMode, AppState};
+use super::{App, AppMode, AppState};
 
-pub async fn full_ui(store: Arc<impl EventStore>) -> Result<(), InteractiveError> {
+pub async fn full_ui(
+    store: Arc<dyn EventStore>,
+    repository: Arc<Mutex<dyn ListenTrackerRepository>>,
+) -> Result<(), InteractiveError> {
+    let mut app = App::new(store, repository);
+    app.initialize().await?;
+
     println!("Loading...");
-    let mut processor = EventProcessor::default();
-    let event_stream = store.get_events("listens".to_string()).await.unwrap();
-    for event in event_stream.events.iter() {
-        processor.process_event(event);
-    }
+
     enable_raw_mode().map_err(|e| InteractiveError::Crossterm {
         message: e.to_string(),
     })?;
@@ -45,8 +48,7 @@ pub async fn full_ui(store: Arc<impl EventStore>) -> Result<(), InteractiveError
     })?;
 
     // create app and run it
-    let app = AppState::default();
-    let res = run_app(&mut terminal, app, &processor);
+    let res = run_app(&mut terminal, app).await;
 
     // restore terminal
     disable_raw_mode().map_err(|e| InteractiveError::Crossterm {
@@ -73,94 +75,62 @@ pub async fn full_ui(store: Arc<impl EventStore>) -> Result<(), InteractiveError
     Ok(())
 }
 
-fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    mut app: AppState,
-    processor: &EventProcessor,
-) -> io::Result<()> {
+async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &app))?;
+        terminal.draw(|f| ui(f, &app.state))?;
 
-        if let Event::Key(key) = event::read()? {
-            match app.mode {
-                AppMode::Normal => match key.code {
-                    KeyCode::Char('c') => {
-                        app.error_message = None;
-                        app.command_name = None;
-                        app.command_parameters = None;
-                        app.mode = AppMode::EnterCommand;
-                    }
-                    KeyCode::Char('q') => {
-                        return Ok(());
-                    }
-                    _ => {}
-                },
-                AppMode::EnterCommand => match key.code {
-                    KeyCode::Enter => {
-                        app.error_message = None;
-                        let text: String = app.input.drain(..).collect();
-                        match AppCommandName::from_str(&text) {
-                            Ok(it) => {
-                                app.command_steps = it.parameters();
-                                app.command_name = Some(it);
-                                app.mode = AppMode::CommandParameters;
-                            }
-                            Err(_) => {
-                                app.mode = AppMode::Normal;
-                                app.error_message = Some("Unknown command name".to_string());
-                            }
+        // Poll for an event, we do this so that we don't block on waiting for an event.
+        // If we blocked, then we wouldn't tick the app to the next stage.
+        if poll(Duration::from_millis(15))? {
+            if let Event::Key(key) = event::read()? {
+                match app.state.mode {
+                    AppMode::Normal => match key.code {
+                        KeyCode::Char('e') => {
+                            app.start_command_input();
                         }
-                    }
-                    KeyCode::Char(c) => {
-                        app.input.push(c);
-                    }
-                    KeyCode::Backspace => {
-                        app.input.pop();
-                    }
-                    KeyCode::Esc => {
-                        app.error_message = None;
-                        app.mode = AppMode::Normal;
-                    }
-                    _ => {}
-                },
-                AppMode::CommandParameters => match key.code {
-                    KeyCode::Enter => {
-                        let text: String = app.input.drain(..).collect();
-                        let spec = app.command_steps.remove(0);
-                        match app.insert_command_parameter(&text, &spec) {
-                            Ok(_) => {
-                                if app.command_steps.is_empty() {
-                                    app.run_command(processor);
-                                    app.mode = AppMode::Normal;
-                                }
-                            }
-                            Err(e) => {
-                                app.error_message = Some(e.to_string());
-                                app.mode = AppMode::Normal;
-                                app.command_steps.clear();
-                                app.command_name = None;
-                                app.command_parameters = None;
-                            }
+                        KeyCode::Char('q') => {
+                            return Ok(());
                         }
-                    }
-                    KeyCode::Char(c) => {
-                        app.input.push(c);
-                    }
-                    KeyCode::Backspace => {
-                        app.input.pop();
-                    }
-                    KeyCode::Esc => {
-                        app.error_message = None;
-                        app.input.clear();
-                        app.command_name = None;
-                        app.command_steps.clear();
-                        app.command_parameters = None;
-                        app.mode = AppMode::Normal;
-                    }
+                        _ => {}
+                    },
+                    AppMode::EnterCommand => match key.code {
+                        KeyCode::Enter => {
+                            app.command_name_entered();
+                        }
+                        KeyCode::Char(c) => {
+                            app.state.input.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            app.state.input.pop();
+                        }
+                        KeyCode::Esc => {
+                            app.cancel_command();
+                        }
+                        _ => {}
+                    },
+                    AppMode::CommandParameters => match key.code {
+                        KeyCode::Enter => {
+                            app.advance_command_input();
+                        }
+                        KeyCode::Char(c) => {
+                            app.state.input.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            app.state.input.pop();
+                        }
+                        KeyCode::Esc => {
+                            app.cancel_command();
+                        }
+                        _ => {}
+                    },
                     _ => {}
-                },
+                }
             }
+        } else {
+            // Timeout expired, no `Event` is available
         }
+
+        app.tick().await.unwrap();
     }
 }
 
@@ -184,7 +154,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
                 Span::raw("Press "),
                 Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to exit, "),
-                Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to enter command to run."),
             ],
             Style::default().add_modifier(Modifier::RAPID_BLINK),
@@ -200,12 +170,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
             Style::default(),
         ),
         AppMode::CommandParameters => {
-            if let Some(spec) = app.command_steps.get(0) {
+            if let Some(spec) = app.command_parameter_inputs.get(0) {
                 (vec![Span::raw(spec.description())], Style::default())
             } else {
                 (Vec::new(), Style::default())
             }
         }
+        _ => (Vec::new(), Style::default()),
     };
     let mut text = Text::from(Spans::from(msg));
     text.patch_style(style);
@@ -214,19 +185,15 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
 
     let input = Paragraph::new(app.input.as_ref())
         .style(match app.mode {
-            AppMode::Normal => Style::default(),
             AppMode::EnterCommand | AppMode::CommandParameters => {
                 Style::default().fg(Color::Yellow)
             }
+            _ => Style::default(),
         })
         .block(Block::default().borders(Borders::ALL).title("Input"));
     f.render_widget(input, chunks[1]);
 
     match app.mode {
-        AppMode::Normal =>
-            // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
-            {}
-
         AppMode::EnterCommand | AppMode::CommandParameters => {
             // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
             f.set_cursor(
@@ -236,6 +203,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
                 chunks[1].y + 1,
             )
         }
+        _ =>
+            // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
+            {}
     }
 
     let mut messages: Vec<ListItem> = Vec::new();
@@ -248,6 +218,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         messages.push(ListItem::new(content));
     }
 
+    let include_number = !matches!(app.mode, AppMode::EnterCommand);
+
     for message_set in app.display_sets().iter() {
         let content = vec![Spans::from(Span::styled(
             message_set.title.clone(),
@@ -256,7 +228,12 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         messages.push(ListItem::new(content));
 
         for (i, m) in message_set.messages.iter().enumerate() {
-            let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
+            let message = if include_number {
+                format!("{}: {}", i, m)
+            } else {
+                m.to_string()
+            };
+            let content = vec![Spans::from(Span::raw(message))];
             messages.push(ListItem::new(content));
         }
     }
