@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use super::GetEventsError;
+
 #[derive(Debug, Error)]
 pub enum InteractiveError {
     #[error("crossterm Error {message:?}")]
@@ -10,4 +12,6 @@ pub enum InteractiveError {
     RequiredParameterNotSet { name: String },
     #[error("parsing Error {message:?}")]
     ParsingIssue { message: String },
+    #[error("error getting events {error:?}")]
+    GetEventsError { error: GetEventsError },
 }
