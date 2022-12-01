@@ -32,4 +32,4 @@ If you want to search for an artist, or an artist's songs in a more interactive 
 ```bash
 cargo run -- interactive
 ```
-This will let you then run commands like `random artist` and `artist songs` to search for some random artists from your listen history, or list out some songs from an artist.
+This will let you then run commands like `random artist` and `artist songs` to search for some random artists from your listen history, or list out some songs from an artist. You can also process your listens from this prompt as well with `process listens`.
