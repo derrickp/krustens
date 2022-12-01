@@ -1,0 +1,3 @@
+{
+    "files.exclude": ["target", ".git", "build", "krustens.zip", "krustens.sqlite-wal", ".DS_Store"],
+}
