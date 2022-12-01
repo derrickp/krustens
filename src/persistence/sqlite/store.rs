@@ -41,9 +41,9 @@ impl EventStore for SqliteEventStore {
     async fn add_event(
         &self,
         stream: String,
-        event: &Event,
+        event: Event,
         expected_version: u32,
-    ) -> Result<(), AddEventError> {
+    ) -> Result<Event, AddEventError> {
         let current_version = self.stream_version(stream.clone()).await;
 
         if expected_version <= current_version {
@@ -64,7 +64,7 @@ impl EventStore for SqliteEventStore {
             .await
             .unwrap();
 
-        Ok(())
+        Ok(event)
     }
 
     async fn get_events(&self, stream: String) -> Result<EventStream, GetEventsError> {

@@ -13,9 +13,9 @@ pub trait EventStore {
     async fn add_event(
         &self,
         stream: String,
-        event: &Event,
+        event: Event,
         expected_version: u32,
-    ) -> Result<(), AddEventError>;
+    ) -> Result<Event, AddEventError>;
     async fn get_events(&self, stream: String) -> Result<EventStream, GetEventsError>;
     async fn get_events_after(
         &self,
