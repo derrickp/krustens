@@ -12,6 +12,7 @@ use super::{
 #[derive(Default, Serialize)]
 pub struct ArtistsCounts {
     pub artists: HashMap<ArtistName, SongCounter>,
+    pub skipped_artists: HashMap<ArtistName, SongCounter>,
 }
 
 impl ArtistsCounts {
@@ -26,6 +27,14 @@ impl ArtistsCounts {
                 None
             }
         })
+    }
+
+    pub fn add_song_skip(&mut self, artist_name: &ArtistName, song_name: &str) {
+        let artist_counts = self
+            .skipped_artists
+            .entry(artist_name.clone())
+            .or_insert_with(SongCounter::default);
+        artist_counts.increment_song(song_name, 0);
     }
 
     pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
@@ -127,6 +136,26 @@ impl ArtistsCounts {
     pub fn top_songs(&self, count: usize) -> Vec<ArtistAndSongCount> {
         let mut counts: Vec<ArtistAndSongCount> = self
             .artists
+            .clone()
+            .into_iter()
+            .flat_map(|(artist_name, play_count)| {
+                play_count
+                    .all_song_plays()
+                    .iter()
+                    .map(|song_count| ArtistAndSongCount {
+                        artist_name: artist_name.clone(),
+                        song_count: song_count.clone(),
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        counts.sort_by_key(|song_play_count| Reverse(song_play_count.song_count.1));
+        counts.into_iter().take(count).collect()
+    }
+
+    pub fn top_skipped_songs(&self, count: usize) -> Vec<ArtistAndSongCount> {
+        let mut counts: Vec<ArtistAndSongCount> = self
+            .skipped_artists
             .clone()
             .into_iter()
             .flat_map(|(artist_name, play_count)| {

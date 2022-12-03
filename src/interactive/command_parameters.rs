@@ -69,6 +69,9 @@ pub enum CommandParameters {
     ProcessListens {
         files: Vec<PathBuf>,
     },
+    MostSkipped {
+        count: usize,
+    },
 }
 
 impl CommandParameters {
@@ -150,6 +153,9 @@ impl CommandParameters {
             Self::TopSongs { count: _, year } => Self::TopSongs {
                 count,
                 year: year.to_owned(),
+            },
+            Self::MostSkipped { count: _ } => Self::MostSkipped {
+                count: count.to_owned(),
             },
             _ => self.to_owned(),
         }

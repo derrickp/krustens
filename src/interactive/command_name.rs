@@ -13,6 +13,7 @@ pub enum CommandName {
     PrintStatistics,
     ProcessListens,
     TopSongs,
+    MostSkipped,
 }
 
 impl ToString for CommandName {
@@ -25,6 +26,7 @@ impl ToString for CommandName {
             Self::ProcessListens => "process".to_string(),
             Self::TopArtists => "top artists".to_string(),
             Self::TopSongs => "top songs".to_string(),
+            Self::MostSkipped => "most skipped".to_string(),
         }
     }
 }
@@ -41,6 +43,7 @@ impl FromStr for CommandName {
             "process" => Ok(Self::ProcessListens),
             "top artists" => Ok(Self::TopArtists),
             "top songs" => Ok(Self::TopSongs),
+            "most skipped" => Ok(Self::MostSkipped),
             _ => Err("Unknown text".to_string()),
         }
     }
@@ -69,6 +72,7 @@ impl CommandName {
             }
             Self::TopArtists => "Return the most listened to artists".to_string(),
             Self::TopSongs => "Return the most listened to songs".to_string(),
+            Self::MostSkipped => "Return the most skipped songs of all time".to_string(),
         }
     }
 
@@ -93,6 +97,9 @@ impl CommandName {
             Self::TopSongs => CommandParameters::TopSongs {
                 count: DEFAULT_SONG_COUNT,
                 year: None,
+            },
+            Self::MostSkipped => CommandParameters::MostSkipped {
+                count: DEFAULT_SONG_COUNT,
             },
         }
     }
@@ -163,6 +170,12 @@ impl CommandName {
                     description: "Year to search in (optional, e.g 2022)".to_string(),
                 },
             ],
+            CommandName::MostSkipped => vec![CommandParameterSpec::Count {
+                description: format!(
+                    "Number of songs to return (default: {})",
+                    DEFAULT_SONG_COUNT
+                ),
+            }],
         }
     }
 }

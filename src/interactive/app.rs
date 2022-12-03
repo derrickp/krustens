@@ -175,6 +175,7 @@ impl App {
                 self.run_top_artists(artist_count, year);
             }
             Some(CommandParameters::TopSongs { count, year }) => self.run_top_songs(count, year),
+            Some(CommandParameters::MostSkipped { count }) => self.run_most_skipped(count),
             None => {}
         }
     }
@@ -343,6 +344,20 @@ impl App {
                 .message_sets
                 .insert(0, AppMessageSet { title, messages })
         }
+
+        self.state.command_parameters = None;
+    }
+
+    fn run_most_skipped(&mut self, count: usize) {
+        let most_skipped = self.processor.top_skipped(count);
+        let title = format!("Most skipped songs: (count: {})", count);
+        let messages: Vec<String> = most_skipped
+            .iter()
+            .map(|song_count| format!("{}", song_count))
+            .collect();
+        self.state
+            .message_sets
+            .insert(0, AppMessageSet { title, messages });
 
         self.state.command_parameters = None;
     }

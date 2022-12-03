@@ -8,7 +8,9 @@ use crate::{
     utils::parse_formatted_end_time,
 };
 
-use super::{calendar_counts::YearCounts, song_counter::ArtistSongCounter, ArtistsCounts};
+use super::{
+    calendar_counts::YearCounts, song_counter::ArtistSongCounter, ArtistAndSongCount, ArtistsCounts,
+};
 
 #[derive(Default)]
 pub struct EventProcessor {
@@ -61,7 +63,16 @@ impl EventProcessor {
                     listen.ms_played,
                 );
             }
-            EventData::TrackPlayIgnored(_) => {}
+            EventData::TrackPlayIgnored(ignored) => {
+                self.artists_counts.add_song_skip(
+                    &ArtistName(ignored.artist_name.clone()),
+                    &ignored.track_name,
+                );
+            }
         };
+    }
+
+    pub fn top_skipped(&self, count: usize) -> Vec<ArtistAndSongCount> {
+        self.artists_counts.top_skipped_songs(count)
     }
 }
