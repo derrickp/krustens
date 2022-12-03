@@ -128,6 +128,9 @@ impl App {
             Some(CommandParameters::ProcessListens { files }) => {
                 self.run_process_listens(files).await;
             }
+            Some(CommandParameters::TopArtists { artist_count, year }) => {
+                self.run_top_artists(artist_count, year);
+            }
             None => {}
         }
     }
@@ -226,6 +229,42 @@ impl App {
             }
             self.state.command_parameters = None;
         }
+    }
+
+    fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>) {
+        if let Some(y) = year {
+            let title = format!("Top artists (year: {}, count: {})", y, artist_count);
+            if let Some(year_counts) = self.processor.year_count(y) {
+                let artist_song_counters = year_counts.artists_counts.top(artist_count);
+                let messages: Vec<String> = artist_song_counters
+                    .into_iter()
+                    .map(|counter| counter.total_plays_display())
+                    .collect();
+                self.state
+                    .message_sets
+                    .insert(0, AppMessageSet { title, messages })
+            } else {
+                self.state.message_sets.insert(
+                    0,
+                    AppMessageSet {
+                        title,
+                        messages: vec!["No artists found".to_string()],
+                    },
+                );
+            }
+        } else {
+            let title = format!("Top artists (count: {})", artist_count);
+            let artist_counters = self.processor.artists_counts.top(artist_count);
+            let messages: Vec<String> = artist_counters
+                .into_iter()
+                .map(|counter| counter.total_plays_display())
+                .collect();
+            self.state
+                .message_sets
+                .insert(0, AppMessageSet { title, messages })
+        }
+
+        self.state.command_parameters = None;
     }
 
     fn run_random_artists(

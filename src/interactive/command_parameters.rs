@@ -46,6 +46,10 @@ pub enum CommandParameters {
         artist_count: usize,
         min_listens: u64,
     },
+    TopArtists {
+        artist_count: usize,
+        year: Option<i32>,
+    },
     ArtistSongs {
         name: Option<String>,
     },
@@ -86,6 +90,13 @@ impl CommandParameters {
                 artist_count: artist_count.to_owned(),
                 min_listens: min_listens.to_owned(),
             },
+            Self::TopArtists {
+                artist_count,
+                year: _,
+            } => Self::TopArtists {
+                artist_count: *artist_count,
+                year: Some(year),
+            },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
             _ => self.to_owned(),
         }
@@ -120,6 +131,13 @@ impl CommandParameters {
                 month: month.to_owned(),
                 artist_count,
                 min_listens: min_listens.to_owned(),
+            },
+            Self::TopArtists {
+                artist_count: _,
+                year,
+            } => Self::TopArtists {
+                artist_count,
+                year: year.to_owned(),
             },
             _ => self.to_owned(),
         }

@@ -7,6 +7,7 @@ use super::{CommandParameterSpec, CommandParameters};
 #[derive(Deserialize, Serialize, EnumIter, PartialEq, Debug)]
 pub enum CommandName {
     RandomArtists,
+    TopArtists,
     ArtistSongs,
     ArtistsOnDay,
     PrintStatistics,
@@ -20,7 +21,8 @@ impl ToString for CommandName {
             Self::ArtistSongs => "artist songs".to_string(),
             Self::ArtistsOnDay => "artists on day".to_string(),
             Self::PrintStatistics => "print statistics".to_string(),
-            Self::ProcessListens => "process listens".to_string(),
+            Self::ProcessListens => "process".to_string(),
+            Self::TopArtists => "top artists".to_string(),
         }
     }
 }
@@ -34,7 +36,8 @@ impl FromStr for CommandName {
             "artist songs" => Ok(Self::ArtistSongs),
             "artists on day" => Ok(Self::ArtistsOnDay),
             "print statistics" => Ok(Self::PrintStatistics),
-            "process listens" => Ok(Self::ProcessListens),
+            "process" => Ok(Self::ProcessListens),
+            "top artists" => Ok(Self::TopArtists),
             _ => Err("Unknown text".to_string()),
         }
     }
@@ -60,6 +63,7 @@ impl CommandName {
             Self::ProcessListens => {
                 "Process the listens in the data folder to fill the krustens database".to_string()
             }
+            Self::TopArtists => "Return the most listened to artists".to_string(),
         }
     }
 
@@ -76,6 +80,10 @@ impl CommandName {
             Self::PrintStatistics => CommandParameters::PrintStatistics { year: None },
             Self::ProcessListens => CommandParameters::GetFileNames {
                 input_folder: DEFAULT_INPUT_FOLDER.to_string(),
+            },
+            Self::TopArtists => CommandParameters::TopArtists {
+                artist_count: DEFAULT_ARTIST_COUNT,
+                year: None,
             },
         }
     }
@@ -122,6 +130,18 @@ impl CommandName {
                     DEFAULT_INPUT_FOLDER
                 ),
             }],
+            CommandName::TopArtists => vec![
+                CommandParameterSpec::ArtistCount {
+                    description: format!(
+                        "Number of artists to return (default: {})",
+                        DEFAULT_ARTIST_COUNT
+                    ),
+                },
+                CommandParameterSpec::Year {
+                    optional: true,
+                    description: "Year to search in (optional, e.g 2022)".to_string(),
+                },
+            ],
         }
     }
 }
