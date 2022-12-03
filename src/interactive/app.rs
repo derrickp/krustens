@@ -1,5 +1,6 @@
 use std::{collections::HashSet, fs, path::PathBuf, str::FromStr, sync::Arc};
 
+use arboard::Clipboard;
 use chrono::NaiveDate;
 use tokio::sync::Mutex;
 
@@ -93,6 +94,45 @@ impl App {
             Err(_) => {
                 self.state.mode = AppMode::Normal;
                 self.state.error_message = Some("Unknown command name".to_string());
+            }
+        }
+    }
+
+    pub fn copy_to_clipboard(&mut self) {
+        if self.state.message_sets.is_empty() {
+            return;
+        }
+
+        let mut clipboard = match Clipboard::new().map_err(|e| InteractiveError::ClipboardError {
+            message: e.to_string(),
+        }) {
+            Ok(it) => it,
+            Err(e) => {
+                self.state.error_message = Some(format!("{}", e));
+                return;
+            }
+        };
+        let text: Vec<String> = self
+            .state
+            .message_sets
+            .iter()
+            .flat_map(|message_set| {
+                let mut message_set_text: Vec<String> = vec![message_set.title.clone()];
+                message_set_text.append(&mut message_set.messages.to_vec());
+                message_set_text
+            })
+            .collect();
+
+        let to_copy = text.join("\n");
+
+        match clipboard
+            .set_text(to_copy)
+            .map_err(|e| InteractiveError::ClipboardError {
+                message: e.to_string(),
+            }) {
+            Ok(_) => {}
+            Err(e) => {
+                self.state.error_message = Some(format!("{}", e));
             }
         }
     }

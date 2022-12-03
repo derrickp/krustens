@@ -91,6 +91,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         KeyCode::Char('q') => {
                             return Ok(());
                         }
+                        KeyCode::Char('c') => {
+                            app.copy_to_clipboard();
+                        }
                         _ => {}
                     },
                     AppMode::EnterCommand => match key.code {
@@ -155,7 +158,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
                 Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to exit, "),
                 Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to enter command to run."),
+                Span::raw(" to enter command to run, "),
+                Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to copy current output."),
             ],
             Style::default().add_modifier(Modifier::RAPID_BLINK),
         ),

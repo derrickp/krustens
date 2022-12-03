@@ -14,4 +14,6 @@ pub enum InteractiveError {
     ParsingIssue { message: String },
     #[error("error getting events {error:?}")]
     GetEventsError { error: GetEventsError },
+    #[error("error with clipboard {message:?}")]
+    ClipboardError { message: String },
 }
