@@ -112,7 +112,7 @@ impl App {
             Some(CommandParameters::RandomArtists {
                 year,
                 month,
-                artist_count,
+                count: artist_count,
                 min_listens,
             }) => self.run_random_artists(year, month, artist_count, min_listens),
             Some(CommandParameters::ArtistSongs { name }) => {
@@ -128,9 +128,13 @@ impl App {
             Some(CommandParameters::ProcessListens { files }) => {
                 self.run_process_listens(files).await;
             }
-            Some(CommandParameters::TopArtists { artist_count, year }) => {
+            Some(CommandParameters::TopArtists {
+                count: artist_count,
+                year,
+            }) => {
                 self.run_top_artists(artist_count, year);
             }
+            Some(CommandParameters::TopSongs { count, year }) => self.run_top_songs(count, year),
             None => {}
         }
     }
@@ -258,6 +262,42 @@ impl App {
             let messages: Vec<String> = artist_counters
                 .into_iter()
                 .map(|counter| counter.total_plays_display())
+                .collect();
+            self.state
+                .message_sets
+                .insert(0, AppMessageSet { title, messages })
+        }
+
+        self.state.command_parameters = None;
+    }
+
+    fn run_top_songs(&mut self, count: usize, year: Option<i32>) {
+        if let Some(y) = year {
+            let title = format!("Top songs (year: {}, count: {})", y, count);
+            if let Some(year_counts) = self.processor.year_count(y) {
+                let artist_song_counters = year_counts.artists_counts.top_songs(count);
+                let messages: Vec<String> = artist_song_counters
+                    .into_iter()
+                    .map(|count| format!("{}", count))
+                    .collect();
+                self.state
+                    .message_sets
+                    .insert(0, AppMessageSet { title, messages })
+            } else {
+                self.state.message_sets.insert(
+                    0,
+                    AppMessageSet {
+                        title,
+                        messages: vec!["No artists found".to_string()],
+                    },
+                );
+            }
+        } else {
+            let title = format!("Top songs (count: {})", count);
+            let artist_counters = self.processor.artists_counts.top_songs(count);
+            let messages: Vec<String> = artist_counters
+                .into_iter()
+                .map(|count| format!("{}", count))
                 .collect();
             self.state
                 .message_sets

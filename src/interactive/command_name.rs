@@ -12,6 +12,7 @@ pub enum CommandName {
     ArtistsOnDay,
     PrintStatistics,
     ProcessListens,
+    TopSongs,
 }
 
 impl ToString for CommandName {
@@ -23,6 +24,7 @@ impl ToString for CommandName {
             Self::PrintStatistics => "print statistics".to_string(),
             Self::ProcessListens => "process".to_string(),
             Self::TopArtists => "top artists".to_string(),
+            Self::TopSongs => "top songs".to_string(),
         }
     }
 }
@@ -38,12 +40,14 @@ impl FromStr for CommandName {
             "print statistics" => Ok(Self::PrintStatistics),
             "process" => Ok(Self::ProcessListens),
             "top artists" => Ok(Self::TopArtists),
+            "top songs" => Ok(Self::TopSongs),
             _ => Err("Unknown text".to_string()),
         }
     }
 }
 
 const DEFAULT_ARTIST_COUNT: usize = 5;
+const DEFAULT_SONG_COUNT: usize = 20;
 const DEFAULT_MIN_LISTENS: u64 = 5;
 const DEFAULT_INPUT_FOLDER: &str = "./data/play_history";
 
@@ -58,12 +62,13 @@ impl CommandName {
                 "List all the songs you listened to on a specific day".to_string()
             }
             Self::PrintStatistics => {
-                "Print out some of the statistics, either for a year or all time".to_string()
+                "Print out a smattering of statistics, either for a year or all time".to_string()
             }
             Self::ProcessListens => {
                 "Process the listens in the data folder to fill the krustens database".to_string()
             }
             Self::TopArtists => "Return the most listened to artists".to_string(),
+            Self::TopSongs => "Return the most listened to songs".to_string(),
         }
     }
 
@@ -72,7 +77,7 @@ impl CommandName {
             Self::RandomArtists => CommandParameters::RandomArtists {
                 year: None,
                 month: None,
-                artist_count: DEFAULT_ARTIST_COUNT,
+                count: DEFAULT_ARTIST_COUNT,
                 min_listens: DEFAULT_MIN_LISTENS,
             },
             Self::ArtistSongs => CommandParameters::ArtistSongs { name: None },
@@ -82,7 +87,11 @@ impl CommandName {
                 input_folder: DEFAULT_INPUT_FOLDER.to_string(),
             },
             Self::TopArtists => CommandParameters::TopArtists {
-                artist_count: DEFAULT_ARTIST_COUNT,
+                count: DEFAULT_ARTIST_COUNT,
+                year: None,
+            },
+            Self::TopSongs => CommandParameters::TopSongs {
+                count: DEFAULT_SONG_COUNT,
                 year: None,
             },
         }
@@ -91,7 +100,7 @@ impl CommandName {
     pub fn parameters(&self) -> Vec<CommandParameterSpec> {
         match *self {
             CommandName::RandomArtists => vec![
-                CommandParameterSpec::ArtistCount {
+                CommandParameterSpec::Count {
                     description: format!(
                         "Number of artists to return (default: {})",
                         DEFAULT_ARTIST_COUNT
@@ -131,10 +140,22 @@ impl CommandName {
                 ),
             }],
             CommandName::TopArtists => vec![
-                CommandParameterSpec::ArtistCount {
+                CommandParameterSpec::Count {
                     description: format!(
                         "Number of artists to return (default: {})",
                         DEFAULT_ARTIST_COUNT
+                    ),
+                },
+                CommandParameterSpec::Year {
+                    optional: true,
+                    description: "Year to search in (optional, e.g 2022)".to_string(),
+                },
+            ],
+            CommandName::TopSongs => vec![
+                CommandParameterSpec::Count {
+                    description: format!(
+                        "Number of songs to return (default: {})",
+                        DEFAULT_SONG_COUNT
                     ),
                 },
                 CommandParameterSpec::Year {

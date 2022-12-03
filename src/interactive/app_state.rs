@@ -78,7 +78,7 @@ impl AppState {
 
                 Ok(())
             }
-            CommandParameterSpec::ArtistCount { description: _ } => {
+            CommandParameterSpec::Count { description: _ } => {
                 if let Ok(count) = text.parse::<usize>() {
                     self.add_artist_count_parameter(count);
                 }
@@ -165,7 +165,7 @@ impl AppState {
         }
 
         if let Some(parameters) = &self.command_parameters {
-            self.command_parameters = Some(parameters.with_artist_count_parameter(count));
+            self.command_parameters = Some(parameters.with_count_parameter(count));
         }
     }
 

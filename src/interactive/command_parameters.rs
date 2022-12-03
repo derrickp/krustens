@@ -6,7 +6,7 @@ pub enum CommandParameterSpec {
     Year { optional: bool, description: String },
     Month { optional: bool, description: String },
     MinListens { description: String },
-    ArtistCount { description: String },
+    Count { description: String },
     Date { optional: bool, description: String },
     ArtistName { optional: bool, description: String },
     InputFolder { description: String },
@@ -32,7 +32,7 @@ impl CommandParameterSpec {
                 optional: _,
                 description,
             }
-            | CommandParameterSpec::ArtistCount { description }
+            | CommandParameterSpec::Count { description }
             | CommandParameterSpec::InputFolder { description } => description.clone(),
         }
     }
@@ -43,11 +43,15 @@ pub enum CommandParameters {
     RandomArtists {
         year: Option<i32>,
         month: Option<u32>,
-        artist_count: usize,
+        count: usize,
         min_listens: u64,
     },
     TopArtists {
-        artist_count: usize,
+        count: usize,
+        year: Option<i32>,
+    },
+    TopSongs {
+        count: usize,
         year: Option<i32>,
     },
     ArtistSongs {
@@ -82,19 +86,26 @@ impl CommandParameters {
             Self::RandomArtists {
                 year: _,
                 month,
-                artist_count,
+                count: artist_count,
                 min_listens,
             } => Self::RandomArtists {
                 year: Some(year),
                 month: month.to_owned(),
-                artist_count: artist_count.to_owned(),
+                count: artist_count.to_owned(),
                 min_listens: min_listens.to_owned(),
             },
             Self::TopArtists {
-                artist_count,
+                count: artist_count,
                 year: _,
             } => Self::TopArtists {
-                artist_count: *artist_count,
+                count: *artist_count,
+                year: Some(year),
+            },
+            Self::TopSongs {
+                count: artist_count,
+                year: _,
+            } => Self::TopSongs {
+                count: *artist_count,
                 year: Some(year),
             },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
@@ -107,36 +118,37 @@ impl CommandParameters {
             Self::RandomArtists {
                 year,
                 month: _,
-                artist_count,
+                count: artist_count,
                 min_listens,
             } => Self::RandomArtists {
                 year: year.to_owned(),
                 month: Some(month),
-                artist_count: artist_count.to_owned(),
+                count: artist_count.to_owned(),
                 min_listens: min_listens.to_owned(),
             },
             _ => self.to_owned(),
         }
     }
 
-    pub fn with_artist_count_parameter(&self, artist_count: usize) -> Self {
+    pub fn with_count_parameter(&self, count: usize) -> Self {
         match self {
             Self::RandomArtists {
                 year,
                 month,
-                artist_count: _,
+                count: _,
                 min_listens,
             } => Self::RandomArtists {
                 year: year.to_owned(),
                 month: month.to_owned(),
-                artist_count,
+                count,
                 min_listens: min_listens.to_owned(),
             },
-            Self::TopArtists {
-                artist_count: _,
-                year,
-            } => Self::TopArtists {
-                artist_count,
+            Self::TopArtists { count: _, year } => Self::TopArtists {
+                count,
+                year: year.to_owned(),
+            },
+            Self::TopSongs { count: _, year } => Self::TopSongs {
+                count,
                 year: year.to_owned(),
             },
             _ => self.to_owned(),
@@ -148,12 +160,12 @@ impl CommandParameters {
             Self::RandomArtists {
                 year,
                 month,
-                artist_count,
+                count: artist_count,
                 min_listens: _,
             } => Self::RandomArtists {
                 year: year.to_owned(),
                 month: month.to_owned(),
-                artist_count: artist_count.to_owned(),
+                count: artist_count.to_owned(),
                 min_listens,
             },
             _ => self.to_owned(),
@@ -165,7 +177,7 @@ impl CommandParameters {
             Self::RandomArtists {
                 year: _,
                 month: _,
-                artist_count: _,
+                count: _,
                 min_listens: _,
             } => self.to_owned(),
             Self::ArtistsOnDay { date: _ } => Self::ArtistsOnDay { date: Some(date) },
@@ -178,7 +190,7 @@ impl CommandParameters {
             Self::RandomArtists {
                 year: _,
                 month: _,
-                artist_count: _,
+                count: _,
                 min_listens: _,
             } => self.to_owned(),
             Self::ArtistSongs { name: _ } => Self::ArtistSongs {
