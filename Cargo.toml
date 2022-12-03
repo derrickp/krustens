@@ -11,7 +11,7 @@ exclude = [
 ]
 readme = "README.md"
 homepage = "https://github.com/derrickp/krustens"
-keywords = ["music", "cli"]
+keywords = ["music", "cli", "tui"]
 categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -20,7 +20,6 @@ categories = ["command-line-utilities"]
 arboard = "3.2.0"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-clap = { version = "4.0", features = ["derive"] }
 crossterm = "0.25.0"
 csv = "1.1"
 rand = "0.8.5"
