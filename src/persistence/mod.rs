@@ -1,4 +1,3 @@
-mod artist_counts;
 mod event_store;
 mod format;
 pub mod fs;
@@ -6,7 +5,6 @@ mod reader;
 pub mod sqlite;
 mod writer;
 
-pub use artist_counts::write_artists_counts;
 pub use event_store::EventStore;
 pub use format::Format;
 pub use reader::Reader;

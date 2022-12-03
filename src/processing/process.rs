@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use tokio::sync::Mutex;
 
@@ -42,28 +42,7 @@ pub async fn process_file(
         events.push(listen_event);
     }
 
-    Ok(events)
-}
-
-pub async fn process_listens(
-    input_folder: &str,
-    store: Arc<dyn EventStore>,
-    repository: Arc<Mutex<dyn ListenTrackerRepository>>,
-) {
-    let streaming_files =
-        fs::read_dir(input_folder).unwrap_or_else(|_| panic!("Could not read {}", &input_folder));
-
-    for entry in streaming_files {
-        let path = entry.unwrap().path().clone();
-        match process_file(&path, &store, &repository).await {
-            Ok(events) => println!("added {} events", events.len()),
-            Err(e) => println!("Error {}", e),
-        }
-        println!("processed {}", path.display());
-    }
-
-    let mut repo = repository.lock().await;
-
-    let _ = repo.get().await;
     repo.flush().await;
+
+    Ok(events)
 }

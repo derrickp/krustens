@@ -1,12 +1,12 @@
 use std::{collections::HashSet, fs, path::PathBuf, str::FromStr, sync::Arc};
 
 use arboard::Clipboard;
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use tokio::sync::Mutex;
 
 use crate::{
     errors::InteractiveError,
-    persistence::EventStore,
+    persistence::{fs::FileWriter, EventStore, Format, Writer},
     processing,
     projections::{
         statistics::{EventProcessor, General},
@@ -15,7 +15,7 @@ use crate::{
     track_plays::ArtistName,
 };
 
-use super::{AppMessageSet, AppMode, AppState, CommandName, CommandParameters};
+use super::{AppMessageSet, AppMode, AppState, CommandName, CommandParameters, OutputFolder};
 
 pub struct App {
     store: Arc<dyn EventStore>,
@@ -96,6 +96,33 @@ impl App {
                 self.state.error_message = Some("Unknown command name".to_string());
             }
         }
+    }
+
+    pub async fn export_to_file(&mut self) {
+        let folder = OutputFolder {
+            root: "./output".to_string(),
+        };
+        let writer = FileWriter {
+            folder: Box::new(folder),
+        };
+
+        let today = Local::now().format("%Y-%m-%d %H:%M:%S");
+        writer
+            .write(
+                &self.state.message_sets,
+                &format!("messages_{}", &today),
+                Format::Json,
+            )
+            .await
+            .unwrap();
+        writer
+            .write(
+                &self.state.message_sets,
+                &format!("messages_{}", &today),
+                Format::Yaml,
+            )
+            .await
+            .unwrap();
     }
 
     pub fn copy_to_clipboard(&mut self) {

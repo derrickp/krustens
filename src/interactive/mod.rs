@@ -5,6 +5,7 @@ mod app_state;
 mod command_name;
 mod command_parameters;
 mod full;
+mod output_folder;
 
 pub use app::App;
 pub use app_message_set::AppMessageSet;
@@ -13,3 +14,4 @@ pub use app_state::AppState;
 pub use command_name::{CommandName, CommandNameIter};
 pub use command_parameters::{CommandParameterSpec, CommandParameters};
 pub use full::full_ui;
+pub use output_folder::OutputFolder;

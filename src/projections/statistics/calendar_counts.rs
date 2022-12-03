@@ -52,10 +52,6 @@ impl YearCounts {
         self.artists_counts.over_min_plays(min)
     }
 
-    pub fn month_counts(&self) -> Vec<&MonthCounts> {
-        self.months.values().collect()
-    }
-
     pub fn month_count(&self, month: u32) -> Option<&MonthCounts> {
         self.months.get(&month)
     }

@@ -1,6 +1,7 @@
 use std::{
     fs::File,
     io::{BufWriter, Write},
+    path::PathBuf,
 };
 
 use async_trait::async_trait;
@@ -33,12 +34,21 @@ impl Writer for FileWriter {
     ) -> Result<bool, WriteError> {
         self.folder.create_if_necessary();
 
-        let full_path = self.folder.full_path(name);
-        let file = match File::create(&full_path) {
+        let file_extension = match format {
+            Format::Json => "json",
+            Format::Yaml => "yaml",
+        };
+
+        let mut path_buf = PathBuf::new();
+        path_buf.push(self.folder.path());
+        path_buf.push(name);
+        path_buf.set_extension(file_extension);
+
+        let file = match File::create(&path_buf) {
             Ok(it) => it,
             Err(e) => {
                 return Err(WriteError::CannotCreateFile {
-                    path: full_path,
+                    path: format!("{}", &path_buf.display()),
                     message: e.to_string(),
                 })
             }
@@ -67,7 +77,7 @@ impl Writer for FileWriter {
         match writer.flush() {
             Ok(_) => Ok(true),
             Err(e) => Err(WriteError::CannotWriteToFile {
-                path: full_path,
+                path: format!("{}", path_buf.display()),
                 message: e.to_string(),
             }),
         }
