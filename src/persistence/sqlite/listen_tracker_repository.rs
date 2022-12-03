@@ -1,6 +1,9 @@
 use sqlx::{Pool, Sqlite};
 
-use crate::projections::{build_id, ListenTracker, ListenTrackerRepository};
+use crate::{
+    events::Event,
+    projections::{build_id, ListenTracker, ListenTrackerRepository},
+};
 
 use std::{collections::HashSet, sync::Arc};
 
@@ -12,50 +15,11 @@ pub struct SqliteListenTrackerRepository {
     dirty: bool,
     buffer_count: usize,
     not_persisted_count: usize,
-    store: Arc<dyn EventStore + Send + Sync>,
 }
 
 #[async_trait::async_trait]
 impl ListenTrackerRepository for SqliteListenTrackerRepository {
-    async fn get(&mut self) -> &ListenTracker {
-        let current_version = self.listen_tracker.version;
-
-        let store_version = self.store.stream_version("listens".to_string()).await;
-
-        if current_version == store_version {
-            return &self.listen_tracker;
-        }
-
-        let event_stream = self
-            .store
-            .get_events_after("listens".to_string(), self.listen_tracker.version)
-            .await
-            .unwrap();
-
-        for event in event_stream.events.iter() {
-            match &event.data {
-                EventData::TrackPlayAdded(listen) => {
-                    let id = build_id(&listen.artist_name, &listen.track_name, &listen.end_time);
-                    self.listen_tracker.version += 1;
-                    self.listen_tracker.listens.insert(id.clone())
-                }
-                EventData::TrackPlayIgnored(ignored) => {
-                    let id = build_id(&ignored.artist_name, &ignored.track_name, &ignored.end_time);
-                    self.listen_tracker.version += 1;
-                    self.listen_tracker.listens.insert(id.clone())
-                }
-            };
-            self.not_persisted_count += 1;
-        }
-        self.dirty = true;
-
-        if self.not_persisted_count >= self.buffer_count {
-            SqliteListenTrackerRepository::write(&self.pool, &self.listen_tracker)
-                .await
-                .unwrap();
-            self.reset_persistence();
-        }
-
+    fn get(&self) -> &ListenTracker {
         &self.listen_tracker
     }
 
@@ -68,6 +32,31 @@ impl ListenTrackerRepository for SqliteListenTrackerRepository {
             .await
             .unwrap();
         self.reset_persistence();
+    }
+
+    async fn project_event(&mut self, event: &Event) {
+        match &event.data {
+            EventData::TrackPlayAdded(listen) => {
+                let id = build_id(&listen.artist_name, &listen.track_name, &listen.end_time);
+                self.listen_tracker.version += 1;
+                self.listen_tracker.listens.insert(id)
+            }
+            EventData::TrackPlayIgnored(ignored) => {
+                let id = build_id(&ignored.artist_name, &ignored.track_name, &ignored.end_time);
+                self.listen_tracker.version += 1;
+                self.listen_tracker.listens.insert(id)
+            }
+        };
+        self.not_persisted_count += 1;
+
+        self.dirty = true;
+
+        if self.not_persisted_count >= self.buffer_count {
+            SqliteListenTrackerRepository::write(&self.pool, &self.listen_tracker)
+                .await
+                .unwrap();
+            self.reset_persistence();
+        }
     }
 }
 
@@ -126,13 +115,29 @@ pub async fn listen_tracker_repo(
     store: Arc<dyn EventStore + Send + Sync>,
 ) -> SqliteListenTrackerRepository {
     let listen_tracker = SqliteListenTrackerRepository::read(pool).await.unwrap();
-
-    SqliteListenTrackerRepository {
+    let current_version = listen_tracker.version;
+    let mut repository = SqliteListenTrackerRepository {
         pool: pool.clone(),
         listen_tracker,
         dirty: false,
         buffer_count,
         not_persisted_count: 0,
-        store: store.clone(),
+    };
+
+    let store_version = store.stream_version("listens".to_string()).await;
+
+    if current_version == store_version {
+        return repository;
     }
+
+    let event_stream = store
+        .get_events_after("listens".to_string(), current_version)
+        .await
+        .unwrap();
+
+    for event in event_stream.events.iter() {
+        repository.project_event(event).await;
+    }
+    repository.flush().await;
+    repository
 }

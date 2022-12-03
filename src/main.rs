@@ -22,7 +22,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     let store = Arc::new(SqliteEventStore::from(pool.clone()));
     let repository = Arc::new(Mutex::new(
-        listen_tracker_repo(1500, &pool, store.clone()).await,
+        listen_tracker_repo(20_000, &pool, store.clone()).await,
     ));
     full_ui(store, repository).await.unwrap();
     Ok(())

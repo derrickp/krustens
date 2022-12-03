@@ -25,8 +25,7 @@ pub async fn process_file(
             track_play: track_play.clone(),
             min_listen_length: MIN_LISTEN_LENGTH,
         };
-        let tracker = repo.get().await;
-        let handle_result = command.handle(tracker);
+        let handle_result = command.handle(repo.get());
 
         let listen_event = match handle_result {
             Some(event) => {
@@ -38,7 +37,7 @@ pub async fn process_file(
             }
             None => continue,
         };
-
+        repo.project_event(&listen_event).await;
         events.push(listen_event);
     }
 
