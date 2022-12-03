@@ -16,5 +16,6 @@
     "**/Thumbs.db": true,
     "target": true,
     "*.sqlite-*": true,
+    "build": true,
   }
 }
