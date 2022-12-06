@@ -9,7 +9,7 @@ use crate::{
     persistence::{fs::FileWriter, EventStore, Format, Writer},
     processing,
     projections::{
-        statistics::{EventProcessor, General},
+        statistics::{ArtistsCounts, EventProcessor},
         ListenTrackerRepository,
     },
     track_plays::ArtistName,
@@ -431,7 +431,7 @@ impl App {
             .map(|m| format!("{}", m))
             .unwrap_or_else(|| "None".to_string());
         let title = format!(
-            "Artist search (year: {}, month: {}, min listens: {}, count: {})",
+            "Random artists (year: {}, month: {}, min listens: {}, count: {})",
             year_text, month_text, min_listens, artist_count
         );
 
@@ -500,47 +500,82 @@ impl App {
     }
 
     fn run_print_statistics(&mut self, year: Option<i32>) {
-        if let Some(y) = year {
-            let title = format!("Statistics for {}", y);
+        let mut message_sets = if let Some(y) = year {
             if let Some(year_counts) = self.processor.year_count(y) {
-                let general = year_counts.artists_counts.general_stats(5);
-                self.add_general_stats_to_messages(&general, &title);
+                self.summarize_to_message_sets(&year, &year_counts.artists_counts)
             } else {
-                self.state.message_sets.insert(
-                    0,
-                    AppMessageSet {
-                        title: format!("Statistics for {}", y),
-                        messages: vec!["No statistics gathered".to_string()],
-                    },
-                );
+                vec![AppMessageSet {
+                    title: format!("Statistics for {}", y),
+                    messages: vec!["No statistics gathered".to_string()],
+                }]
             }
         } else {
-            let general = self.processor.artists_counts.general_stats(5);
-            self.add_general_stats_to_messages(&general, "Statistics");
+            self.summarize_to_message_sets(&year, &self.processor.artists_counts)
+        };
+
+        message_sets.reverse();
+
+        for message_set in message_sets.into_iter() {
+            self.state.message_sets.insert(0, message_set);
         }
 
         self.state.command_parameters = None;
     }
 
-    fn add_general_stats_to_messages(&mut self, general: &General, title: &str) {
-        self.state.message_sets.insert(
-            0,
-            AppMessageSet {
-                title: title.to_string(),
-                messages: vec![format!(
-                    "You've listened to {} artists",
-                    general.count_artists_listened_to
-                )],
-            },
-        );
+    fn summarize_to_message_sets(
+        &self,
+        year: &Option<i32>,
+        artist_counts: &ArtistsCounts,
+    ) -> Vec<AppMessageSet> {
+        let general = artist_counts.general_stats(5);
+        let total_played_message = if artist_counts.time_played.time_hr > 2.0 {
+            format!("Listened for {:.1} hours", artist_counts.time_played.time_hr)
+        } else {
+            format!(
+                "Listened for {:.1} minutes",
+                artist_counts.time_played.time_min
+            )
+        };
 
-        self.state.message_sets.insert(
-            1,
+        let general_stats_title = year
+            .map(|y| format!("General statistics (year: {})", y))
+            .unwrap_or_else(|| "General statistics (year: None)".to_string());
+        let most_listened_title = year
+            .map(|y| format!("Most listened artists (year: {})", y))
+            .unwrap_or_else(|| "Most listened artists (year: None)".to_string());
+
+        let most_listened_songs_title = year
+            .map(|y| format!("Most listened songs (year: {})", y))
+            .unwrap_or_else(|| "Most listened songs (year: None)".to_string());
+
+        let most_listened_songs_unique_artist_title = year
+            .map(|y| format!("Most listened songs (unique artist, year: {})", y))
+            .unwrap_or_else(|| "Most listened songs (unique artist, year: None)".to_string());
+
+        vec![
             AppMessageSet {
-                title: "Most listened to artists".to_string(),
+                title: general_stats_title,
+                messages: vec![
+                    format!(
+                        "You've listened to {} artists",
+                        general.count_artists_listened_to
+                    ),
+                    total_played_message,
+                ],
+            },
+            AppMessageSet {
+                title: most_listened_title,
                 messages: general.artist_total_plays.to_vec(),
             },
-        );
+            AppMessageSet {
+                title: most_listened_songs_title,
+                messages: general.most_played_songs.to_vec(),
+            },
+            AppMessageSet {
+                title: most_listened_songs_unique_artist_title,
+                messages: general.artist_most_played_songs.to_vec(),
+            },
+        ]
     }
 
     fn reset_state(&mut self, reset_error_message: bool) {

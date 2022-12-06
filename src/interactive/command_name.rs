@@ -10,7 +10,7 @@ pub enum CommandName {
     TopArtists,
     ArtistSongs,
     ArtistsOnDay,
-    PrintStatistics,
+    Summarize,
     ProcessListens,
     TopSongs,
     MostSkipped,
@@ -22,7 +22,7 @@ impl ToString for CommandName {
             Self::RandomArtists => "random artists".to_string(),
             Self::ArtistSongs => "artist songs".to_string(),
             Self::ArtistsOnDay => "artists on day".to_string(),
-            Self::PrintStatistics => "print statistics".to_string(),
+            Self::Summarize => "summarize".to_string(),
             Self::ProcessListens => "process".to_string(),
             Self::TopArtists => "top artists".to_string(),
             Self::TopSongs => "top songs".to_string(),
@@ -39,7 +39,7 @@ impl FromStr for CommandName {
             "random artists" => Ok(Self::RandomArtists),
             "artist songs" => Ok(Self::ArtistSongs),
             "artists on day" => Ok(Self::ArtistsOnDay),
-            "print statistics" => Ok(Self::PrintStatistics),
+            "summarize" => Ok(Self::Summarize),
             "process" => Ok(Self::ProcessListens),
             "top artists" => Ok(Self::TopArtists),
             "top songs" => Ok(Self::TopSongs),
@@ -64,8 +64,8 @@ impl CommandName {
             Self::ArtistsOnDay => {
                 "List all the songs you listened to on a specific day".to_string()
             }
-            Self::PrintStatistics => {
-                "Print out a smattering of statistics, either for a year or all time".to_string()
+            Self::Summarize => {
+                "Print out a summary of your listens, either for a year or all time".to_string()
             }
             Self::ProcessListens => {
                 "Process the listens in the data folder to fill the krustens database".to_string()
@@ -86,7 +86,7 @@ impl CommandName {
             },
             Self::ArtistSongs => CommandParameters::ArtistSongs { name: None },
             Self::ArtistsOnDay => CommandParameters::ArtistsOnDay { date: None },
-            Self::PrintStatistics => CommandParameters::PrintStatistics { year: None },
+            Self::Summarize => CommandParameters::PrintStatistics { year: None },
             Self::ProcessListens => CommandParameters::GetFileNames {
                 input_folder: DEFAULT_INPUT_FOLDER.to_string(),
             },
@@ -136,7 +136,7 @@ impl CommandName {
                 optional: false,
                 description: "Date to search on (required, format YYYY-MM-DD)".to_string(),
             }],
-            CommandName::PrintStatistics => vec![CommandParameterSpec::Year {
+            CommandName::Summarize => vec![CommandParameterSpec::Year {
                 optional: true,
                 description: "Year to get statistics of (optional, e.g 2022)".to_string(),
             }],

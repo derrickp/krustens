@@ -3,16 +3,28 @@ use serde::Serialize;
 #[derive(Clone, Default, Debug, Serialize)]
 pub struct TimePlayed {
     pub time_ms: u64,
-    pub time_sec: f32,
-    pub time_min: f32,
-    pub time_hr: f32,
+    pub time_sec: f64,
+    pub time_min: f64,
+    pub time_hr: f64,
 }
 
 impl TimePlayed {
-    pub fn add_ms(&mut self, time: u64) {
-        self.time_ms += time;
-        self.time_sec += time as f32 / 1000.0;
-        self.time_min += time as f32 / 60000.0;
-        self.time_hr += time as f32 / (60000.0 * 60.0);
+    pub fn add_ms(&mut self, additional_ms: u64) {
+        self.time_ms += additional_ms;
+        self.time_sec = self.calculate_time_sec(additional_ms);
+        self.time_min = self.calculate_time_min(additional_ms);
+        self.time_hr = self.calculate_time_hr(additional_ms);
+    }
+
+    fn calculate_time_sec(&self, additional_ms: u64) -> f64 {
+        (self.time_ms + additional_ms) as f64 / 1000.0
+    }
+
+    fn calculate_time_min(&self, additional_ms: u64) -> f64 {
+        (self.time_ms + additional_ms) as f64 / 60_000.0
+    }
+
+    fn calculate_time_hr(&self, additional_ms: u64) -> f64 {
+        (self.time_ms + additional_ms) as f64 / (60_000.0 * 60.0)
     }
 }

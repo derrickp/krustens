@@ -6,12 +6,13 @@ use crate::track_plays::ArtistName;
 
 use super::{
     song_counter::{ArtistSongCounter, SongCounter},
-    ArtistAndSongCount, General,
+    ArtistAndSongCount, General, TimePlayed,
 };
 
 #[derive(Default, Serialize)]
 pub struct ArtistsCounts {
     pub artists: HashMap<ArtistName, SongCounter>,
+    pub time_played: TimePlayed,
     pub skipped_artists: HashMap<ArtistName, SongCounter>,
 }
 
@@ -38,12 +39,13 @@ impl ArtistsCounts {
     }
 
     pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
-        let artist_counts = self
+        self.time_played.add_ms(time_played);
+        let song_counter = self
             .artists
             .entry(artist_name.clone())
             .or_insert_with(SongCounter::default);
 
-        artist_counts.increment_song(song_name, time_played);
+        song_counter.increment_song(song_name, time_played);
     }
 
     pub fn over_min_plays(&self, min_plays: u64) -> Vec<ArtistSongCounter> {

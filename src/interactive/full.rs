@@ -249,6 +249,6 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
     }
 
     let messages =
-        List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages"));
+        List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages (overflown text not shown, copy or write to file to see)"));
     f.render_widget(messages, chunks[2]);
 }
