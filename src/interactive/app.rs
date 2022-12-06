@@ -2,6 +2,7 @@ use std::{collections::HashSet, fs, path::PathBuf, str::FromStr, sync::Arc};
 
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
+use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -47,6 +48,16 @@ impl App {
             self.processor.process_event(event);
         }
         Ok(())
+    }
+
+    pub fn autocomplete_command_name(&mut self) {
+        let names: Vec<CommandName> = CommandName::iter()
+            .filter(|name| name.to_string().starts_with(&self.state.input))
+            .collect();
+        if names.len() == 1 {
+            let name = names.get(0).unwrap();
+            self.state.input = name.to_string();
+        }
     }
 
     pub async fn tick(&mut self) -> Result<(), InteractiveError> {
@@ -529,7 +540,10 @@ impl App {
     ) -> Vec<AppMessageSet> {
         let general = artist_counts.general_stats(5);
         let total_played_message = if artist_counts.time_played.time_hr > 2.0 {
-            format!("Listened for {:.1} hours", artist_counts.time_played.time_hr)
+            format!(
+                "Listened for {:.1} hours",
+                artist_counts.time_played.time_hr
+            )
         } else {
             format!(
                 "Listened for {:.1} minutes",

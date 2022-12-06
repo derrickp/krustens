@@ -112,6 +112,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         KeyCode::Esc => {
                             app.cancel_command();
                         }
+                        KeyCode::Tab => {
+                            app.autocomplete_command_name();
+                        }
                         _ => {}
                     },
                     AppMode::CommandParameters => match key.code {
@@ -248,7 +251,10 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         }
     }
 
-    let messages =
-        List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages (overflown text not shown, copy or write to file to see)"));
+    let messages = List::new(messages).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Messages (overflown text not shown, copy or write to file to see)"),
+    );
     f.render_widget(messages, chunks[2]);
 }
