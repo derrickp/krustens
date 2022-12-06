@@ -22,13 +22,14 @@ impl AppState {
         match self.mode {
             AppMode::CommandParameters => Vec::new(),
             AppMode::EnterCommand => {
+                let mut messages: Vec<String> = CommandName::iter()
+                    .map(|command| format!("{} - {}", command.to_string(), command.description()))
+                    .collect();
+                messages.sort();
+
                 vec![AppMessageSet {
                     title: "Commands".to_string(),
-                    messages: CommandName::iter()
-                        .map(|command| {
-                            format!("{} - {}", command.to_string(), command.description())
-                        })
-                        .collect(),
+                    messages,
                 }]
             }
             AppMode::Normal | AppMode::Processing => self.message_sets.to_vec(),
