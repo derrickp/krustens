@@ -109,14 +109,12 @@ impl CommandName {
             CommandName::RandomArtists => vec![
                 CommandParameterSpec::Count {
                     description: format!(
-                        "Number of artists to return (default: {})",
-                        DEFAULT_ARTIST_COUNT
+                        "Number of artists to return (default: {DEFAULT_ARTIST_COUNT})"
                     ),
                 },
                 CommandParameterSpec::MinListens {
                     description: format!(
-                        "Minimum number of listens to filter artists by (default: {})",
-                        DEFAULT_MIN_LISTENS
+                        "Minimum number of listens to filter artists by (default: {DEFAULT_MIN_LISTENS})"
                     ),
                 },
                 CommandParameterSpec::Year {
@@ -142,15 +140,13 @@ impl CommandName {
             }],
             CommandName::ProcessListens => vec![CommandParameterSpec::InputFolder {
                 description: format!(
-                    "What folder to parse the files containing listens from (default: {})",
-                    DEFAULT_INPUT_FOLDER
+                    "What folder to parse the files containing listens from (default: {DEFAULT_INPUT_FOLDER})"
                 ),
             }],
             CommandName::TopArtists => vec![
                 CommandParameterSpec::Count {
                     description: format!(
-                        "Number of artists to return (default: {})",
-                        DEFAULT_ARTIST_COUNT
+                        "Number of artists to return (default: {DEFAULT_ARTIST_COUNT})"
                     ),
                 },
                 CommandParameterSpec::Year {
@@ -161,8 +157,7 @@ impl CommandName {
             CommandName::TopSongs => vec![
                 CommandParameterSpec::Count {
                     description: format!(
-                        "Number of songs to return (default: {})",
-                        DEFAULT_SONG_COUNT
+                        "Number of songs to return (default: {DEFAULT_SONG_COUNT})"
                     ),
                 },
                 CommandParameterSpec::Year {
@@ -172,8 +167,7 @@ impl CommandName {
             ],
             CommandName::MostSkipped => vec![CommandParameterSpec::Count {
                 description: format!(
-                    "Number of songs to return (default: {})",
-                    DEFAULT_SONG_COUNT
+                    "Number of songs to return (default: {DEFAULT_SONG_COUNT})"
                 ),
             }],
         }

@@ -23,7 +23,7 @@ pub fn read_track_plays(path: &PathBuf) -> Result<Vec<TrackPlay>, ReadError> {
         } else if extension.eq_ignore_ascii_case("csv") {
             FileType::Csv
         } else {
-            FileType::Unsupported(format!("{:?}", extension))
+            FileType::Unsupported(format!("{extension:?}"))
         }
     });
 

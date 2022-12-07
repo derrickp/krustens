@@ -30,7 +30,7 @@ impl EventStore for SqliteEventStore {
         {
             Ok(it) => it,
             Err(e) => {
-                println!("{:?}", e);
+                println!("{e:?}");
                 None
             }
         };

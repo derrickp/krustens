@@ -69,7 +69,7 @@ pub async fn full_ui(
         })?;
 
     if let Err(err) = res {
-        println!("{:?}", err)
+        println!("{err:?}")
     }
 
     Ok(())
@@ -225,7 +225,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
 
     if let Some(error_message) = &app.error_message {
         let content = vec![Spans::from(Span::styled(
-            format!("Error: {}", error_message),
+            format!("Error: {error_message}"),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         ))];
         messages.push(ListItem::new(content));
@@ -242,7 +242,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
 
         for (i, m) in message_set.messages.iter().enumerate() {
             let message = if include_number {
-                format!("{}: {}", i, m)
+                format!("{i}: {m}")
             } else {
                 m.to_string()
             };

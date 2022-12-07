@@ -22,5 +22,5 @@ impl HasListen for ListenTracker {
 }
 
 pub fn build_id(artist_name: &str, track_name: &str, end_time: &str) -> String {
-    format!("{}-{}-{}", artist_name, track_name, end_time)
+    format!("{artist_name}-{track_name}-{end_time}")
 }

@@ -146,7 +146,7 @@ impl App {
         }) {
             Ok(it) => it,
             Err(e) => {
-                self.state.error_message = Some(format!("{}", e));
+                self.state.error_message = Some(format!("{e}"));
                 return;
             }
         };
@@ -170,7 +170,7 @@ impl App {
             }) {
             Ok(_) => {}
             Err(e) => {
-                self.state.error_message = Some(format!("{}", e));
+                self.state.error_message = Some(format!("{e}"));
             }
         }
     }
@@ -267,7 +267,7 @@ impl App {
 
                     format!("Added {} events from {}", count, path.display())
                 }
-                Err(e) => format!("Error: {}", e),
+                Err(e) => format!("Error: {e}"),
             };
 
             let mut messages = match files.last() {
@@ -316,7 +316,7 @@ impl App {
 
     fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>) {
         if let Some(y) = year {
-            let title = format!("Top artists (year: {}, count: {})", y, artist_count);
+            let title = format!("Top artists (year: {y}, count: {artist_count})");
             if let Some(year_counts) = self.processor.year_count(y) {
                 let artist_song_counters = year_counts.artists_counts.top(artist_count);
                 let messages: Vec<String> = artist_song_counters
@@ -336,7 +336,7 @@ impl App {
                 );
             }
         } else {
-            let title = format!("Top artists (count: {})", artist_count);
+            let title = format!("Top artists (count: {artist_count})");
             let artist_counters = self.processor.artists_counts.top(artist_count);
             let messages: Vec<String> = artist_counters
                 .into_iter()
@@ -352,12 +352,12 @@ impl App {
 
     fn run_top_songs(&mut self, count: usize, year: Option<i32>) {
         if let Some(y) = year {
-            let title = format!("Top songs (year: {}, count: {})", y, count);
+            let title = format!("Top songs (year: {y}, count: {count})");
             if let Some(year_counts) = self.processor.year_count(y) {
                 let artist_song_counters = year_counts.artists_counts.top_songs(count);
                 let messages: Vec<String> = artist_song_counters
                     .into_iter()
-                    .map(|count| format!("{}", count))
+                    .map(|count| format!("{count}"))
                     .collect();
                 self.state
                     .message_sets
@@ -372,11 +372,11 @@ impl App {
                 );
             }
         } else {
-            let title = format!("Top songs (count: {})", count);
+            let title = format!("Top songs (count: {count})");
             let artist_counters = self.processor.artists_counts.top_songs(count);
             let messages: Vec<String> = artist_counters
                 .into_iter()
-                .map(|count| format!("{}", count))
+                .map(|count| format!("{count}"))
                 .collect();
             self.state
                 .message_sets
@@ -388,10 +388,10 @@ impl App {
 
     fn run_most_skipped(&mut self, count: usize) {
         let most_skipped = self.processor.top_skipped(count);
-        let title = format!("Most skipped songs: (count: {})", count);
+        let title = format!("Most skipped songs: (count: {count})");
         let messages: Vec<String> = most_skipped
             .iter()
-            .map(|song_count| format!("{}", song_count))
+            .map(|song_count| format!("{song_count}"))
             .collect();
         self.state
             .message_sets
@@ -436,14 +436,13 @@ impl App {
         }
 
         let year_text = year
-            .map(|y| format!("{}", y))
+            .map(|y| format!("{y}"))
             .unwrap_or_else(|| "None".to_string());
         let month_text = month
-            .map(|m| format!("{}", m))
+            .map(|m| format!("{m}"))
             .unwrap_or_else(|| "None".to_string());
         let title = format!(
-            "Random artists (year: {}, month: {}, min listens: {}, count: {})",
-            year_text, month_text, min_listens, artist_count
+            "Random artists (year: {year_text}, month: {month_text}, min listens: {min_listens}, count: {artist_count})"
         );
 
         let messages = if artist_names.is_empty() {
@@ -479,7 +478,7 @@ impl App {
         self.state.message_sets.insert(
             0,
             AppMessageSet {
-                title: format!("Songs for {}", name),
+                title: format!("Songs for {name}"),
                 messages: songs,
             },
         );
@@ -516,7 +515,7 @@ impl App {
                 self.summarize_to_message_sets(&year, &year_counts.artists_counts)
             } else {
                 vec![AppMessageSet {
-                    title: format!("Statistics for {}", y),
+                    title: format!("Statistics for {y}"),
                     messages: vec!["No statistics gathered".to_string()],
                 }]
             }
@@ -552,18 +551,18 @@ impl App {
         };
 
         let general_stats_title = year
-            .map(|y| format!("General statistics (year: {})", y))
+            .map(|y| format!("General statistics (year: {y})"))
             .unwrap_or_else(|| "General statistics (year: None)".to_string());
         let most_listened_title = year
-            .map(|y| format!("Most listened artists (year: {})", y))
+            .map(|y| format!("Most listened artists (year: {y})"))
             .unwrap_or_else(|| "Most listened artists (year: None)".to_string());
 
         let most_listened_songs_title = year
-            .map(|y| format!("Most listened songs (year: {})", y))
+            .map(|y| format!("Most listened songs (year: {y})"))
             .unwrap_or_else(|| "Most listened songs (year: None)".to_string());
 
         let most_listened_songs_unique_artist_title = year
-            .map(|y| format!("Most listened songs (unique artist, year: {})", y))
+            .map(|y| format!("Most listened songs (unique artist, year: {y})"))
             .unwrap_or_else(|| "Most listened songs (unique artist, year: None)".to_string());
 
         vec![
