@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use strum::IntoEnumIterator;
 
-use crate::errors::InteractiveError;
+use crate::{errors::InteractiveError, persistence::Format};
 
 use super::{AppMessageSet, AppMode, CommandName, CommandParameterSpec, CommandParameters};
 
@@ -117,6 +117,18 @@ impl AppState {
                 }
                 Ok(())
             }
+            CommandParameterSpec::OutputFolder { description: _ } => {
+                if !text.is_empty() {
+                    self.add_output_folder_parameter(text);
+                }
+                Ok(())
+            }
+            CommandParameterSpec::FileFormat { description: _ } => {
+                if let Ok(format) = Format::try_from(text.to_string()) {
+                    self.add_format_parameter(format);
+                }
+                Ok(())
+            }
         }
     }
 
@@ -127,6 +139,26 @@ impl AppState {
 
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_input_folder_parameter(input_folder));
+        }
+    }
+
+    fn add_output_folder_parameter(&mut self, output_folder: &str) {
+        if self.command_parameters.is_none() {
+            self.set_default_command_parameters();
+        }
+
+        if let Some(parameters) = &self.command_parameters {
+            self.command_parameters = Some(parameters.with_output_folder_parameter(output_folder));
+        }
+    }
+
+    fn add_format_parameter(&mut self, format: Format) {
+        if self.command_parameters.is_none() {
+            self.set_default_command_parameters();
+        }
+
+        if let Some(parameters) = &self.command_parameters {
+            self.command_parameters = Some(parameters.with_format_parameter(format));
         }
     }
 

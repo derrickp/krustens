@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum_macros::EnumIter;
 
+use crate::persistence::Format;
+
 use super::{CommandParameterSpec, CommandParameters};
 
 #[derive(Deserialize, Serialize, EnumIter, PartialEq, Debug)]
@@ -14,6 +16,7 @@ pub enum CommandName {
     ProcessListens,
     TopSongs,
     MostSkipped,
+    Export,
 }
 
 impl ToString for CommandName {
@@ -27,6 +30,7 @@ impl ToString for CommandName {
             Self::TopArtists => "top artists".to_string(),
             Self::TopSongs => "top songs".to_string(),
             Self::MostSkipped => "most skipped".to_string(),
+            Self::Export => "export".to_string(),
         }
     }
 }
@@ -44,6 +48,7 @@ impl FromStr for CommandName {
             "top artists" => Ok(Self::TopArtists),
             "top songs" => Ok(Self::TopSongs),
             "most skipped" => Ok(Self::MostSkipped),
+            "export" => Ok(Self::Export),
             _ => Err("Unknown text".to_string()),
         }
     }
@@ -53,6 +58,8 @@ const DEFAULT_ARTIST_COUNT: usize = 5;
 const DEFAULT_SONG_COUNT: usize = 20;
 const DEFAULT_MIN_LISTENS: u64 = 5;
 const DEFAULT_INPUT_FOLDER: &str = "./data/play_history";
+const DEFAULT_OUTPUT_FOLDER: &str = "./output";
+const DEFAULT_FILE_FORMAT: Format = Format::Yaml;
 
 impl CommandName {
     pub fn description(&self) -> String {
@@ -73,6 +80,7 @@ impl CommandName {
             Self::TopArtists => "Return the most listened to artists".to_string(),
             Self::TopSongs => "Return the most listened to songs".to_string(),
             Self::MostSkipped => "Return the most skipped songs of all time".to_string(),
+            Self::Export => "Export the current output to a file".to_string(),
         }
     }
 
@@ -100,6 +108,10 @@ impl CommandName {
             },
             Self::MostSkipped => CommandParameters::MostSkipped {
                 count: DEFAULT_SONG_COUNT,
+            },
+            Self::Export => CommandParameters::Export {
+                output_folder: DEFAULT_OUTPUT_FOLDER.to_string(),
+                format: DEFAULT_FILE_FORMAT,
             },
         }
     }
@@ -170,6 +182,19 @@ impl CommandName {
                     "Number of songs to return (default: {DEFAULT_SONG_COUNT})"
                 ),
             }],
+            CommandName::Export => vec![
+                CommandParameterSpec::OutputFolder {
+                    description: format!("Where to put the file {DEFAULT_OUTPUT_FOLDER}")
+                },
+                CommandParameterSpec::FileFormat {
+                    description: format!(
+                        "What file format to use (options: {}, {} default: {}",
+                        Format::Json.extension_display(),
+                        Format::Yaml.extension_display(),
+                        Format::Yaml.extension_display()
+                    )
+                }
+            ]
         }
     }
 }

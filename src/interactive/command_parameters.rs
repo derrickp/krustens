@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use chrono::NaiveDate;
 
+use crate::persistence::Format;
+
 pub enum CommandParameterSpec {
     Year { optional: bool, description: String },
     Month { optional: bool, description: String },
@@ -10,6 +12,8 @@ pub enum CommandParameterSpec {
     Date { optional: bool, description: String },
     ArtistName { optional: bool, description: String },
     InputFolder { description: String },
+    OutputFolder { description: String },
+    FileFormat { description: String },
 }
 
 impl CommandParameterSpec {
@@ -33,7 +37,9 @@ impl CommandParameterSpec {
                 description,
             }
             | CommandParameterSpec::Count { description }
-            | CommandParameterSpec::InputFolder { description } => description.clone(),
+            | CommandParameterSpec::InputFolder { description }
+            | CommandParameterSpec::OutputFolder { description }
+            | CommandParameterSpec::FileFormat { description } => description.clone(),
         }
     }
 }
@@ -72,6 +78,10 @@ pub enum CommandParameters {
     MostSkipped {
         count: usize,
     },
+    Export {
+        output_folder: String,
+        format: Format,
+    },
 }
 
 impl CommandParameters {
@@ -79,6 +89,32 @@ impl CommandParameters {
         match self {
             Self::GetFileNames { input_folder: _ } => Self::GetFileNames {
                 input_folder: input_folder.to_string(),
+            },
+            _ => self.to_owned(),
+        }
+    }
+
+    pub fn with_output_folder_parameter(&self, output_folder: &str) -> Self {
+        match self {
+            Self::Export {
+                output_folder: _,
+                format,
+            } => Self::Export {
+                output_folder: output_folder.to_string(),
+                format: format.to_owned(),
+            },
+            _ => self.to_owned(),
+        }
+    }
+
+    pub fn with_format_parameter(&self, format: Format) -> Self {
+        match self {
+            Self::Export {
+                output_folder,
+                format: _,
+            } => Self::Export {
+                output_folder: output_folder.to_owned(),
+                format,
             },
             _ => self.to_owned(),
         }

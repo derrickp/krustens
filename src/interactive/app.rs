@@ -109,9 +109,9 @@ impl App {
         }
     }
 
-    pub async fn export_to_file(&mut self) {
+    async fn run_export_to_file(&mut self, output_folder: &str, format: Format) {
         let folder = OutputFolder {
-            root: "./output".to_string(),
+            root: output_folder.to_string(),
         };
         let writer = FileWriter {
             folder: Box::new(folder),
@@ -122,18 +122,11 @@ impl App {
             .write(
                 &self.state.message_sets,
                 &format!("messages_{}", &today),
-                Format::Json,
+                format,
             )
             .await
             .unwrap();
-        writer
-            .write(
-                &self.state.message_sets,
-                &format!("messages_{}", &today),
-                Format::Yaml,
-            )
-            .await
-            .unwrap();
+        self.state.command_parameters = None;
     }
 
     pub fn copy_to_clipboard(&mut self) {
@@ -214,6 +207,10 @@ impl App {
             }
             Some(CommandParameters::TopSongs { count, year }) => self.run_top_songs(count, year),
             Some(CommandParameters::MostSkipped { count }) => self.run_most_skipped(count),
+            Some(CommandParameters::Export {
+                output_folder,
+                format,
+            }) => self.run_export_to_file(&output_folder, format).await,
             None => {}
         }
     }
