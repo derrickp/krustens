@@ -17,6 +17,13 @@ pub struct ArtistsCounts {
 }
 
 impl ArtistsCounts {
+    pub fn total_count(&self) -> u64 {
+        self.artists
+            .values()
+            .map(|song_counter| song_counter.total_song_plays())
+            .sum()
+    }
+
     pub fn find_artist(&self, name: &ArtistName) -> Option<ArtistSongCounter> {
         self.artists.iter().find_map(|(n, v)| {
             if name.0.to_lowercase() == n.0.to_lowercase() {

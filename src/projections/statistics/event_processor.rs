@@ -19,6 +19,13 @@ pub struct EventProcessor {
 }
 
 impl EventProcessor {
+    pub fn data(&self) -> Vec<(&str, u64)> {
+        self.year_counts()
+            .iter()
+            .flat_map(|year_count| year_count.month_data())
+            .collect()
+    }
+
     pub fn artists_on_day(&self, date: NaiveDate) -> Vec<ArtistSongCounter> {
         self.years
             .get(&date.year())

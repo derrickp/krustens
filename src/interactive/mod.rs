@@ -2,6 +2,7 @@ mod app;
 mod app_message_set;
 mod app_mode;
 mod app_state;
+mod chart;
 mod command_name;
 mod command_parameters;
 mod full;

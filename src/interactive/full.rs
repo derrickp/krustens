@@ -11,7 +11,7 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{BarChart, Block, Borders, List, ListItem, Paragraph},
     Frame, Terminal,
 };
 
@@ -77,7 +77,7 @@ pub async fn full_ui(
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &app.state))?;
+        terminal.draw(|f| ui(f, &app))?;
 
         // Poll for an event, we do this so that we don't block on waiting for an event.
         // If we blocked, then we wouldn't tick the app to the next stage.
@@ -143,7 +143,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
+fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
@@ -157,7 +157,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         )
         .split(f.size());
 
-    let (msg, style) = match app.mode {
+    let (msg, style) = match app.state.mode {
         AppMode::Normal => (
             vec![
                 Span::raw("Press "),
@@ -183,7 +183,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
             Style::default(),
         ),
         AppMode::CommandParameters => {
-            if let Some(spec) = app.command_parameter_inputs.get(0) {
+            if let Some(spec) = app.state.command_parameter_inputs.get(0) {
                 (vec![Span::raw(spec.description())], Style::default())
             } else {
                 (Vec::new(), Style::default())
@@ -196,8 +196,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
     let help_message = Paragraph::new(text);
     f.render_widget(help_message, chunks[0]);
 
-    let input = Paragraph::new(app.input.as_ref())
-        .style(match app.mode {
+    let input = Paragraph::new(app.state.input.as_ref())
+        .style(match app.state.mode {
             AppMode::EnterCommand | AppMode::CommandParameters => {
                 Style::default().fg(Color::Yellow)
             }
@@ -206,12 +206,12 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         .block(Block::default().borders(Borders::ALL).title("Input"));
     f.render_widget(input, chunks[1]);
 
-    match app.mode {
+    match app.state.mode {
         AppMode::EnterCommand | AppMode::CommandParameters => {
             // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
             f.set_cursor(
                 // Put cursor past the end of the input text
-                chunks[1].x + app.input.width() as u16 + 1,
+                chunks[1].x + app.state.input.width() as u16 + 1,
                 // Move one line down, from the border to the input line
                 chunks[1].y + 1,
             )
@@ -223,7 +223,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
 
     let mut messages: Vec<ListItem> = Vec::new();
 
-    if let Some(error_message) = &app.error_message {
+    if let Some(error_message) = &app.state.error_message {
         let content = vec![Spans::from(Span::styled(
             format!("Error: {error_message}"),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
@@ -231,9 +231,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         messages.push(ListItem::new(content));
     }
 
-    let include_number = !matches!(app.mode, AppMode::EnterCommand);
+    let include_number = !matches!(app.state.mode, AppMode::EnterCommand);
 
-    for message_set in app.display_sets().iter() {
+    for message_set in app.state.display_sets().iter() {
         let content = vec![Spans::from(Span::styled(
             message_set.title.clone(),
             Style::default().add_modifier(Modifier::UNDERLINED),
@@ -256,5 +256,14 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
             .borders(Borders::ALL)
             .title("Messages (overflown text not shown, copy or write to file to see)"),
     );
-    f.render_widget(messages, chunks[2]);
+
+    let data = app.chart_data();
+
+    let barchart = BarChart::default()
+        .block(Block::default().title("Listens").borders(Borders::ALL))
+        .data(&data)
+        .bar_width(9)
+        .bar_style(Style::default().fg(Color::Yellow))
+        .value_style(Style::default().fg(Color::Black).bg(Color::Yellow));
+    f.render_widget(barchart, chunks[2]);
 }

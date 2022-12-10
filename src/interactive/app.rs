@@ -1,7 +1,7 @@
 use std::{collections::HashSet, fs, path::PathBuf, str::FromStr, sync::Arc};
 
 use arboard::Clipboard;
-use chrono::{Local, NaiveDate};
+use chrono::{Local, Month, NaiveDate};
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 
@@ -16,7 +16,10 @@ use crate::{
     track_plays::ArtistName,
 };
 
-use super::{AppMessageSet, AppMode, AppState, CommandName, CommandParameters, OutputFolder};
+use super::{
+    chart::DataPoint, AppMessageSet, AppMode, AppState, CommandName, CommandParameters,
+    OutputFolder,
+};
 
 pub struct App {
     store: Arc<dyn EventStore>,
@@ -91,6 +94,10 @@ impl App {
                 self.state.mode = AppMode::Normal;
             }
         }
+    }
+
+    pub fn chart_data(&self) -> Vec<(&str, u64)> {
+        self.processor.data()
     }
 
     pub fn command_name_entered(&mut self) {
@@ -599,5 +606,15 @@ impl App {
         self.state.command_parameters = None;
         self.state.input.clear();
         self.state.command_parameter_inputs.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn something() {
+        let month = 10;
+        let padded = format!("{:02}", month);
+        assert_eq!("10".to_string(), padded);
     }
 }

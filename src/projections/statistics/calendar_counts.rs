@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{Datelike, NaiveDate, Weekday};
+use chrono::{Datelike, Month, NaiveDate, Weekday};
 use serde::Serialize;
 
 use crate::track_plays::ArtistName;
@@ -24,11 +24,22 @@ impl From<&NaiveDate> for YearCounts {
 }
 
 impl YearCounts {
+    pub fn month_data(&self) -> Vec<(&str, u64)> {
+        self.month_counts()
+            .iter()
+            .map(|month_count| (month_count.label_with_year(), month_count.total_plays()))
+            .collect()
+    }
+
     pub fn artists_on_day(&self, date: &NaiveDate) -> Vec<ArtistSongCounter> {
         self.months
             .get(&date.month())
             .map(|month_counts| month_counts.artists_on_day(date))
             .unwrap_or_default()
+    }
+
+    pub fn month_counts(&self) -> Vec<&MonthCounts> {
+        self.months.values().collect()
     }
 
     pub fn add_song_play(
@@ -61,12 +72,16 @@ pub struct MonthCounts {
     pub month: u32,
     pub days: HashMap<u32, DayCounts>,
     pub artists_counts: ArtistsCounts,
+    pub label: String,
 }
 
 impl From<&NaiveDate> for MonthCounts {
     fn from(date: &NaiveDate) -> Self {
+        let month = date.month();
+
         Self {
-            month: date.month(),
+            label: format!("{:02} {}", month, date.year()),
+            month,
             days: HashMap::new(),
             artists_counts: ArtistsCounts::default(),
         }
@@ -74,6 +89,14 @@ impl From<&NaiveDate> for MonthCounts {
 }
 
 impl MonthCounts {
+    pub fn label_with_year(&self) -> &str {
+        &self.label
+    }
+
+    pub fn total_plays(&self) -> u64 {
+        self.artists_counts.total_count()
+    }
+
     pub fn add_song_play(
         &mut self,
         date: &NaiveDate,
