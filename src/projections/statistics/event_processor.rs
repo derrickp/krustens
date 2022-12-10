@@ -9,7 +9,8 @@ use crate::{
 };
 
 use super::{
-    calendar_counts::YearCounts, song_counter::ArtistSongCounter, ArtistAndSongCount, ArtistsCounts,
+    calendar_counts::YearCounts, song_counter::ArtistSongCounter, ArtistAndSongCount,
+    ArtistsCounts, MonthCounts,
 };
 
 #[derive(Default)]
@@ -24,6 +25,18 @@ impl EventProcessor {
             .get(&date.year())
             .map(|year_count| year_count.artists_on_day(&date))
             .unwrap_or_default()
+    }
+
+    pub fn month_counts(&self, month: u32) -> Vec<MonthCounts> {
+        let mut month_counts: Vec<MonthCounts> = Vec::new();
+
+        for year_count in self.years.values() {
+            if let Some(month_count) = year_count.month_count(month) {
+                month_counts.push(month_count.clone());
+            }
+        }
+
+        month_counts
     }
 
     pub fn year_counts(&self) -> Vec<&YearCounts> {

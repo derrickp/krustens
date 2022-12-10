@@ -9,7 +9,7 @@ use super::{
     ArtistAndSongCount, General, TimePlayed,
 };
 
-#[derive(Default, Serialize)]
+#[derive(Clone, Default, Serialize)]
 pub struct ArtistsCounts {
     pub artists: HashMap<ArtistName, SongCounter>,
     pub time_played: TimePlayed,
@@ -17,6 +17,16 @@ pub struct ArtistsCounts {
 }
 
 impl ArtistsCounts {
+    pub fn add(&mut self, other: &ArtistsCounts) {
+        self.time_played.add_ms(other.time_played.time_ms);
+        for (artist_name, counter) in other.artists.iter() {
+            self.artists
+                .entry(artist_name.clone())
+                .or_insert(SongCounter::default())
+                .add(counter);
+        }
+    }
+
     pub fn find_artist(&self, name: &ArtistName) -> Option<ArtistSongCounter> {
         self.artists.iter().find_map(|(n, v)| {
             if name.0.to_lowercase() == n.0.to_lowercase() {

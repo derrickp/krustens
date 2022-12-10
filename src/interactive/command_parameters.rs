@@ -55,6 +55,7 @@ pub enum CommandParameters {
     TopArtists {
         count: usize,
         year: Option<i32>,
+        month: Option<u32>,
     },
     TopSongs {
         count: usize,
@@ -136,9 +137,11 @@ impl CommandParameters {
             Self::TopArtists {
                 count: artist_count,
                 year: _,
+                month,
             } => Self::TopArtists {
                 count: *artist_count,
                 year: Some(year),
+                month: month.to_owned(),
             },
             Self::TopSongs {
                 count: artist_count,
@@ -165,6 +168,15 @@ impl CommandParameters {
                 count: artist_count.to_owned(),
                 min_listens: min_listens.to_owned(),
             },
+            Self::TopArtists {
+                count,
+                year,
+                month: _,
+            } => Self::TopArtists {
+                year: year.to_owned(),
+                count: count.to_owned(),
+                month: Some(month),
+            },
             _ => self.to_owned(),
         }
     }
@@ -182,9 +194,14 @@ impl CommandParameters {
                 count,
                 min_listens: min_listens.to_owned(),
             },
-            Self::TopArtists { count: _, year } => Self::TopArtists {
+            Self::TopArtists {
+                count: _,
+                year,
+                month,
+            } => Self::TopArtists {
                 count,
                 year: year.to_owned(),
+                month: month.to_owned(),
             },
             Self::TopSongs { count: _, year } => Self::TopSongs {
                 count,

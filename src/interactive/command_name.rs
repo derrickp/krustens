@@ -101,6 +101,7 @@ impl CommandName {
             Self::TopArtists => CommandParameters::TopArtists {
                 count: DEFAULT_ARTIST_COUNT,
                 year: None,
+                month: None,
             },
             Self::TopSongs => CommandParameters::TopSongs {
                 count: DEFAULT_SONG_COUNT,
@@ -165,6 +166,10 @@ impl CommandName {
                     optional: true,
                     description: "Year to search in (optional, e.g 2022)".to_string(),
                 },
+                CommandParameterSpec::Month {
+                    optional: true,
+                    description: "Month to search in(optional, 1-12)".to_string(),
+                }
             ],
             CommandName::TopSongs => vec![
                 CommandParameterSpec::Count {
@@ -184,11 +189,11 @@ impl CommandName {
             }],
             CommandName::Export => vec![
                 CommandParameterSpec::OutputFolder {
-                    description: format!("Where to put the file {DEFAULT_OUTPUT_FOLDER}")
+                    description: format!("Where to put the file (default: {DEFAULT_OUTPUT_FOLDER})")
                 },
                 CommandParameterSpec::FileFormat {
                     description: format!(
-                        "What file format to use (options: {}, {} default: {}",
+                        "What file format to use ({} or {}, default: {})",
                         Format::Json.extension_display(),
                         Format::Yaml.extension_display(),
                         Format::Yaml.extension_display()

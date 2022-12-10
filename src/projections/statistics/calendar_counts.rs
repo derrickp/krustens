@@ -7,6 +7,7 @@ use crate::track_plays::ArtistName;
 
 use super::{artists_counts::ArtistsCounts, song_counter::ArtistSongCounter};
 
+#[derive(Clone)]
 pub struct YearCounts {
     pub year: i32,
     pub months: HashMap<u32, MonthCounts>,
@@ -57,6 +58,7 @@ impl YearCounts {
     }
 }
 
+#[derive(Clone)]
 pub struct MonthCounts {
     pub month: u32,
     pub days: HashMap<u32, DayCounts>,
@@ -74,6 +76,15 @@ impl From<&NaiveDate> for MonthCounts {
 }
 
 impl MonthCounts {
+    pub fn merge(month_counts: Vec<MonthCounts>) -> ArtistsCounts {
+        let mut starting_counts = ArtistsCounts::default();
+
+        for month_count in month_counts.iter() {
+            starting_counts.add(&month_count.artists_counts);
+        }
+
+        starting_counts
+    }
     pub fn add_song_play(
         &mut self,
         date: &NaiveDate,
@@ -103,7 +114,7 @@ impl MonthCounts {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DayCounts {
     pub day_of_month: u32,
     pub weekday: Weekday,

@@ -40,6 +40,15 @@ pub struct SongCounter {
 }
 
 impl SongCounter {
+    pub fn add(&mut self, other: &SongCounter) {
+        self.total_song_plays += other.total_song_plays;
+        self.total_time_played
+            .add_ms(other.total_time_played.time_ms);
+        for song_count in other.song_counts.iter() {
+            self.increment_song(&song_count.0, song_count.1);
+        }
+    }
+
     pub fn total_song_plays(&self) -> u64 {
         self.total_song_plays
     }

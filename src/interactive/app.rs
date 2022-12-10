@@ -10,7 +10,7 @@ use crate::{
     persistence::{fs::FileWriter, EventStore, Format, Writer},
     processing,
     projections::{
-        statistics::{ArtistsCounts, EventProcessor},
+        statistics::{ArtistsCounts, EventProcessor, MonthCounts},
         ListenTrackerRepository,
     },
     track_plays::ArtistName,
@@ -202,8 +202,9 @@ impl App {
             Some(CommandParameters::TopArtists {
                 count: artist_count,
                 year,
+                month,
             }) => {
-                self.run_top_artists(artist_count, year);
+                self.run_top_artists(artist_count, year, month);
             }
             Some(CommandParameters::TopSongs { count, year }) => self.run_top_songs(count, year),
             Some(CommandParameters::MostSkipped { count }) => self.run_most_skipped(count),
@@ -311,11 +312,36 @@ impl App {
         }
     }
 
-    fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>) {
-        if let Some(y) = year {
-            let title = format!("Top artists (year: {y}, count: {artist_count})");
-            if let Some(year_counts) = self.processor.year_count(y) {
-                let artist_song_counters = year_counts.artists_counts.top(artist_count);
+    fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>, month: Option<u32>) {
+        match (year, month) {
+            (None, None) => self.top_artists(artist_count),
+            (None, Some(m)) => self.top_artists_for_month(artist_count, m),
+            (Some(y), None) => self.top_artists_for_year(artist_count, y),
+            (Some(y), Some(m)) => self.top_artists_for_year_month(artist_count, y, m),
+        }
+
+        self.state.command_parameters = None;
+    }
+
+    fn top_artists_for_month(&mut self, artist_count: usize, month: u32) {
+        let title = format!("Top artists (month: {month}, count: {artist_count})");
+        let month_counts = self.processor.month_counts(month);
+        let artist_counts = MonthCounts::merge(month_counts);
+        let artist_song_counters = artist_counts.top(artist_count);
+        let messages: Vec<String> = artist_song_counters
+            .into_iter()
+            .map(|counter| counter.total_plays_display())
+            .collect();
+        self.state
+            .message_sets
+            .insert(0, AppMessageSet { title, messages });
+    }
+
+    fn top_artists_for_year_month(&mut self, artist_count: usize, year: i32, month: u32) {
+        let title = format!("Top artists (year: {year}, month: {month}, count: {artist_count})");
+        if let Some(year_counts) = self.processor.year_count(year) {
+            if let Some(month_counts) = year_counts.month_count(month) {
+                let artist_song_counters = month_counts.artists_counts.top(artist_count);
                 let messages: Vec<String> = artist_song_counters
                     .into_iter()
                     .map(|counter| counter.total_plays_display())
@@ -323,28 +349,50 @@ impl App {
                 self.state
                     .message_sets
                     .insert(0, AppMessageSet { title, messages })
-            } else {
-                self.state.message_sets.insert(
-                    0,
-                    AppMessageSet {
-                        title,
-                        messages: vec!["No artists found".to_string()],
-                    },
-                );
             }
         } else {
-            let title = format!("Top artists (count: {artist_count})");
-            let artist_counters = self.processor.artists_counts.top(artist_count);
-            let messages: Vec<String> = artist_counters
+            self.state.message_sets.insert(
+                0,
+                AppMessageSet {
+                    title,
+                    messages: vec!["No artists found".to_string()],
+                },
+            );
+        }
+    }
+
+    fn top_artists_for_year(&mut self, artist_count: usize, year: i32) {
+        let title = format!("Top artists (year: {year}, count: {artist_count})");
+        if let Some(year_counts) = self.processor.year_count(year) {
+            let artist_song_counters = year_counts.artists_counts.top(artist_count);
+            let messages: Vec<String> = artist_song_counters
                 .into_iter()
                 .map(|counter| counter.total_plays_display())
                 .collect();
             self.state
                 .message_sets
                 .insert(0, AppMessageSet { title, messages })
+        } else {
+            self.state.message_sets.insert(
+                0,
+                AppMessageSet {
+                    title,
+                    messages: vec!["No artists found".to_string()],
+                },
+            );
         }
+    }
 
-        self.state.command_parameters = None;
+    fn top_artists(&mut self, artist_count: usize) {
+        let title = format!("Top artists (count: {artist_count})");
+        let artist_counters = self.processor.artists_counts.top(artist_count);
+        let messages: Vec<String> = artist_counters
+            .into_iter()
+            .map(|counter| counter.total_plays_display())
+            .collect();
+        self.state
+            .message_sets
+            .insert(0, AppMessageSet { title, messages })
     }
 
     fn run_top_songs(&mut self, count: usize, year: Option<i32>) {
