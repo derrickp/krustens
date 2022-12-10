@@ -25,6 +25,8 @@ impl ArtistsCounts {
                 .or_insert(SongCounter::default())
                 .add(counter);
         }
+
+        // TODO: Add skipped song merging too
     }
 
     pub fn find_artist(&self, name: &ArtistName) -> Option<ArtistSongCounter> {
