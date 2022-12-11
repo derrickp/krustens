@@ -1,5 +1,5 @@
 use crate::{
-    events::{Event, EventData, TrackPlayAdded, TrackSkipped},
+    processing::events::{Event, EventData, TrackPlayAdded, TrackSkipped},
     projections::HasListen,
     track_plays::{self, Normalized, TrackPlay},
 };

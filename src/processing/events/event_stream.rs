@@ -1,4 +1,4 @@
-use crate::events::Event;
+use super::Event;
 
 #[derive(Default)]
 pub struct EventStream {

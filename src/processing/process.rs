@@ -3,9 +3,11 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
 use crate::{
-    errors::ReadError, events::Event, persistence::EventStore, processing::commands::AddTrackPlay,
+    errors::ReadError, persistence::EventStore, processing::commands::AddTrackPlay,
     projections::ListenTrackerRepository, track_plays::read_track_plays,
 };
+
+use super::events::Event;
 
 pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
 

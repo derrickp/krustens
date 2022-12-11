@@ -1,13 +1,13 @@
 use sqlx::{Pool, Sqlite};
 
 use crate::{
-    events::Event,
+    processing::events::{Event, EventData},
     projections::{build_id, ListenTracker, ListenTrackerRepository},
 };
 
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{errors::ReadError, events::EventData, persistence::EventStore};
+use crate::{errors::ReadError, persistence::EventStore};
 
 pub struct SqliteListenTrackerRepository {
     pool: Pool<Sqlite>,
