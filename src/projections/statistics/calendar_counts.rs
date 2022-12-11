@@ -89,6 +89,11 @@ impl MonthCounts {
 
         starting_counts
     }
+
+    pub fn day_counts(&self) -> Vec<&DayCounts> {
+        self.days.values().collect()
+    }
+
     pub fn add_song_play(
         &mut self,
         date: &NaiveDate,
@@ -143,5 +148,17 @@ impl DayCounts {
 
     pub fn artists(&self) -> Vec<ArtistSongCounter> {
         self.artists_counts.all()
+    }
+}
+
+pub fn order_in_week(weekday: &Weekday) -> u8 {
+    match weekday {
+        Weekday::Sun => 1,
+        Weekday::Mon => 2,
+        Weekday::Tue => 3,
+        Weekday::Wed => 4,
+        Weekday::Thu => 5,
+        Weekday::Fri => 6,
+        Weekday::Sat => 7,
     }
 }
