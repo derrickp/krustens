@@ -1,4 +1,4 @@
-use super::{MessageSet, BarChart};
+use super::{BarChart, MessageSet};
 
 #[derive(Clone, Debug)]
 pub enum Output {

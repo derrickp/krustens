@@ -427,7 +427,13 @@ impl Application {
                     )
                 })
                 .collect();
-            self.state.output.insert(0, Output::BarChart(super::BarChart { title: format!("Bar Chart {year}"), data_points }));
+            self.state.output.insert(
+                0,
+                Output::BarChart(super::BarChart {
+                    title: format!("Bar Chart {year}"),
+                    data_points,
+                }),
+            );
         } else {
             let message_set = MessageSet {
                 title: format!("Chart (year: {year})"),
@@ -440,7 +446,7 @@ impl Application {
     }
 
     fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>, month: Option<u32>) {
-        println!("{:?}", year);
+        println!("{year:?}");
         match (year, month) {
             (None, None) => self.top_artists(artist_count),
             (None, Some(m)) => self.top_artists_for_month(artist_count, m),

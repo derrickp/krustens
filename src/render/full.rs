@@ -234,7 +234,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
             app.num_pages(),
         ),
         Some(Output::BarChart(bar_chart)) => {
-            render_chart(f, chunks[2], bar_chart, app.current_page_display(), app.num_pages());
+            render_chart(
+                f,
+                chunks[2],
+                bar_chart,
+                app.current_page_display(),
+                app.num_pages(),
+            );
         }
         None => render_empty(f, chunks[2], app.error_message(), app.mode()),
     }
@@ -274,7 +280,10 @@ fn render_message_set<B: Backend>(
         Mode::CommandParameters => "".to_string(),
         Mode::EnterCommand => "Enter Command".to_string(),
         Mode::Normal | Mode::Processing => {
-            format!("{} page {current_page} of {total_pages} overflow not shown, copy or export to see", message_set.title)
+            format!(
+                "{} page {current_page} of {total_pages} overflow not shown, copy or export to see",
+                message_set.title
+            )
         }
     };
 
@@ -301,9 +310,7 @@ fn render_empty<B: Backend>(
     let body_title = match mode {
         Mode::CommandParameters => "".to_string(),
         Mode::EnterCommand => "Enter Command".to_string(),
-        Mode::Normal | Mode::Processing => {
-            format!("Output")
-        }
+        Mode::Normal | Mode::Processing => "Output".to_string(),
     };
 
     let blocks =
@@ -318,11 +325,15 @@ fn render_chart<B: Backend>(
     current_page: usize,
     total_pages: usize,
 ) {
-    let data: Vec<(&str, u64)> = bar_chart_data.data_points
+    let data: Vec<(&str, u64)> = bar_chart_data
+        .data_points
         .iter()
         .map(|data_point| (data_point.x(), data_point.y()))
         .collect();
-    let title = format!("{} page {current_page} of {total_pages}", bar_chart_data.title);
+    let title = format!(
+        "{} page {current_page} of {total_pages}",
+        bar_chart_data.title
+    );
     let bar_chart = BarChart::default()
         .block(Block::default().title(title).borders(Borders::ALL))
         .data(&data)
