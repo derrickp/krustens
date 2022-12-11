@@ -8,15 +8,15 @@ use crossterm::{
 use tokio::sync::Mutex;
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{BarChart, Block, Borders, List, ListItem, Paragraph},
     Frame, Terminal,
 };
 
 use crate::{
-    app::{Application, Mode},
+    app::{Application, MessageSet, Mode, Output},
     errors::InteractiveError,
     persistence::EventStore,
     projections::ListenTrackerRepository,
@@ -223,9 +223,34 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
             {}
     }
 
-    let mut messages: Vec<ListItem> = Vec::new();
+    match app.current_output() {
+        Some(Output::MessageSet(message_set)) => render_message_set(
+            f,
+            chunks[2],
+            &message_set,
+            app.error_message(),
+            app.mode(),
+            app.current_page_display(),
+            app.num_pages(),
+        ),
+        Some(Output::BarChart(bar_chart)) => {
+            render_chart(f, chunks[2], bar_chart, app.current_page_display(), app.num_pages());
+        }
+        None => render_empty(f, chunks[2], app.error_message(), app.mode()),
+    }
+}
 
-    if let Some(error_message) = app.error_message() {
+fn render_message_set<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect,
+    message_set: &MessageSet,
+    error_message: &Option<String>,
+    mode: &Mode,
+    current_page: usize,
+    total_pages: usize,
+) {
+    let mut messages: Vec<ListItem> = Vec::new();
+    if let Some(error_message) = error_message {
         let content = vec![Spans::from(Span::styled(
             format!("Error: {error_message}"),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
@@ -233,37 +258,76 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
         messages.push(ListItem::new(content));
     }
 
-    let include_number = !matches!(app.mode(), Mode::EnterCommand);
-    if let Some(message_set) = app.current_display_set() {
-        let content = vec![Spans::from(Span::styled(
-            message_set.title.clone(),
-            Style::default().add_modifier(Modifier::UNDERLINED),
-        ))];
-        messages.push(ListItem::new(content));
+    let include_number = !matches!(mode, Mode::EnterCommand);
 
-        for (i, m) in message_set.messages.iter().enumerate() {
-            let message = if include_number {
-                format!("{i}: {m}")
-            } else {
-                m.to_string()
-            };
-            let content = vec![Spans::from(Span::raw(message))];
-            messages.push(ListItem::new(content));
-        }
+    for (i, m) in message_set.messages.iter().enumerate() {
+        let message = if include_number {
+            format!("{i}: {m}")
+        } else {
+            m.to_string()
+        };
+        let content = vec![Spans::from(Span::raw(message))];
+        messages.push(ListItem::new(content));
     }
 
-    let current_page = app.current_page_display();
-    let max_pages = app.num_pages();
-
-    let body_title = match app.mode() {
+    let body_title = match mode {
         Mode::CommandParameters => "".to_string(),
         Mode::EnterCommand => "Enter Command".to_string(),
         Mode::Normal | Mode::Processing => {
-            format!("Output (page {current_page} of {max_pages}) overflown text not shown, copy or export")
+            format!("{} page {current_page} of {total_pages} overflow not shown, copy or export to see", message_set.title)
         }
     };
 
     let blocks =
         List::new(messages).block(Block::default().borders(Borders::ALL).title(body_title));
-    f.render_widget(blocks, chunks[2]);
+    f.render_widget(blocks, chunk);
+}
+
+fn render_empty<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect,
+    error_message: &Option<String>,
+    mode: &Mode,
+) {
+    let mut messages: Vec<ListItem> = Vec::new();
+    if let Some(error_message) = error_message {
+        let content = vec![Spans::from(Span::styled(
+            format!("Error: {error_message}"),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ))];
+        messages.push(ListItem::new(content));
+    }
+
+    let body_title = match mode {
+        Mode::CommandParameters => "".to_string(),
+        Mode::EnterCommand => "Enter Command".to_string(),
+        Mode::Normal | Mode::Processing => {
+            format!("Output")
+        }
+    };
+
+    let blocks =
+        List::new(messages).block(Block::default().borders(Borders::ALL).title(body_title));
+    f.render_widget(blocks, chunk);
+}
+
+fn render_chart<B: Backend>(
+    f: &mut Frame<B>,
+    chunk: Rect,
+    bar_chart_data: crate::app::BarChart,
+    current_page: usize,
+    total_pages: usize,
+) {
+    let data: Vec<(&str, u64)> = bar_chart_data.data_points
+        .iter()
+        .map(|data_point| (data_point.x(), data_point.y()))
+        .collect();
+    let title = format!("{} page {current_page} of {total_pages}", bar_chart_data.title);
+    let bar_chart = BarChart::default()
+        .block(Block::default().title(title).borders(Borders::ALL))
+        .data(&data)
+        .bar_width(9)
+        .bar_style(Style::default().fg(Color::Yellow))
+        .value_style(Style::default().fg(Color::Black).bg(Color::Yellow));
+    f.render_widget(bar_chart, chunk);
 }

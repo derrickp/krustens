@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum_macros::EnumIter;
@@ -17,6 +18,7 @@ pub enum CommandName {
     TopSongs,
     MostSkipped,
     Export,
+    Chart,
 }
 
 impl ToString for CommandName {
@@ -31,6 +33,7 @@ impl ToString for CommandName {
             Self::TopSongs => "top songs".to_string(),
             Self::MostSkipped => "most skipped".to_string(),
             Self::Export => "export".to_string(),
+            Self::Chart => "chart".to_string(),
         }
     }
 }
@@ -49,6 +52,7 @@ impl FromStr for CommandName {
             "top songs" => Ok(Self::TopSongs),
             "most skipped" => Ok(Self::MostSkipped),
             "export" => Ok(Self::Export),
+            "chart" => Ok(Self::Chart),
             _ => Err("Unknown text".to_string()),
         }
     }
@@ -81,6 +85,7 @@ impl CommandName {
             Self::TopSongs => "Return the most listened to songs".to_string(),
             Self::MostSkipped => "Return the most skipped songs of all time".to_string(),
             Self::Export => "Export the current output to a file".to_string(),
+            Self::Chart => "Create a chart of listens in a year by month".to_string(),
         }
     }
 
@@ -114,6 +119,10 @@ impl CommandName {
                 output_folder: DEFAULT_OUTPUT_FOLDER.to_string(),
                 format: DEFAULT_FILE_FORMAT,
             },
+            Self::Chart => {
+                let default_year = chrono::Utc::now().year();
+                CommandParameters::Chart { year: default_year }
+            }
         }
     }
 
@@ -131,24 +140,19 @@ impl CommandName {
                     ),
                 },
                 CommandParameterSpec::Year {
-                    optional: true,
                     description: "Year to search in (optional, e.g 2022)".to_string(),
                 },
                 CommandParameterSpec::Month {
-                    optional: true,
                     description: "Month to search in (optional, 1-12)".to_string(),
                 },
             ],
             CommandName::ArtistSongs => vec![CommandParameterSpec::ArtistName {
-                optional: false,
                 description: "The name of the artist to get songs of".to_string(),
             }],
             CommandName::ArtistsOnDay => vec![CommandParameterSpec::Date {
-                optional: false,
                 description: "Date to search on (required, format YYYY-MM-DD)".to_string(),
             }],
             CommandName::Summarize => vec![CommandParameterSpec::Year {
-                optional: true,
                 description: "Year to get statistics of (optional, e.g 2022)".to_string(),
             }],
             CommandName::ProcessListens => vec![CommandParameterSpec::InputFolder {
@@ -163,11 +167,9 @@ impl CommandName {
                     ),
                 },
                 CommandParameterSpec::Year {
-                    optional: true,
                     description: "Year to search in (optional, e.g 2022)".to_string(),
                 },
                 CommandParameterSpec::Month {
-                    optional: true,
                     description: "Month to search in(optional, 1-12)".to_string(),
                 }
             ],
@@ -178,7 +180,6 @@ impl CommandName {
                     ),
                 },
                 CommandParameterSpec::Year {
-                    optional: true,
                     description: "Year to search in (optional, e.g 2022)".to_string(),
                 },
             ],
@@ -198,6 +199,11 @@ impl CommandName {
                         Format::Yaml.extension_display(),
                         Format::Yaml.extension_display()
                     )
+                }
+            ],
+            CommandName::Chart => vec![
+                CommandParameterSpec::Year {
+                    description: "What year for the chart (defaults to current year)".to_string()
                 }
             ]
         }

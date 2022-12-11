@@ -5,12 +5,12 @@ use chrono::NaiveDate;
 use crate::persistence::Format;
 
 pub enum CommandParameterSpec {
-    Year { optional: bool, description: String },
-    Month { optional: bool, description: String },
+    Year { description: String },
+    Month { description: String },
     MinListens { description: String },
     Count { description: String },
-    Date { optional: bool, description: String },
-    ArtistName { optional: bool, description: String },
+    Date { description: String },
+    ArtistName { description: String },
     InputFolder { description: String },
     OutputFolder { description: String },
     FileFormat { description: String },
@@ -19,23 +19,11 @@ pub enum CommandParameterSpec {
 impl CommandParameterSpec {
     pub fn description(&self) -> String {
         match self {
-            CommandParameterSpec::Year {
-                optional: _,
-                description,
-            }
-            | CommandParameterSpec::Month {
-                optional: _,
-                description,
-            }
+            CommandParameterSpec::Year { description }
+            | CommandParameterSpec::Month { description }
             | CommandParameterSpec::MinListens { description }
-            | CommandParameterSpec::Date {
-                optional: _,
-                description,
-            }
-            | CommandParameterSpec::ArtistName {
-                optional: _,
-                description,
-            }
+            | CommandParameterSpec::Date { description }
+            | CommandParameterSpec::ArtistName { description }
             | CommandParameterSpec::Count { description }
             | CommandParameterSpec::InputFolder { description }
             | CommandParameterSpec::OutputFolder { description }
@@ -82,6 +70,9 @@ pub enum CommandParameters {
     Export {
         output_folder: String,
         format: Format,
+    },
+    Chart {
+        year: i32,
     },
 }
 
@@ -151,6 +142,7 @@ impl CommandParameters {
                 year: Some(year),
             },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
+            Self::Chart { year: _ } => Self::Chart { year },
             _ => self.to_owned(),
         }
     }

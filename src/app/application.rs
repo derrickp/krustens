@@ -16,7 +16,9 @@ use crate::{
     track_plays::ArtistName,
 };
 
-use super::{CommandName, CommandParameters, MessageSet, Mode, OutputFolder, State};
+use super::{
+    BarDataPoint, CommandName, CommandParameters, MessageSet, Mode, Output, OutputFolder, State,
+};
 
 pub struct Application {
     store: Arc<dyn EventStore>,
@@ -51,7 +53,7 @@ impl Application {
     }
 
     pub fn current_page_display(&self) -> usize {
-        if self.state.message_sets.is_empty() {
+        if self.state.output.is_empty() {
             0
         } else {
             self.state.current_page + 1
@@ -59,12 +61,12 @@ impl Application {
     }
 
     pub fn num_pages(&self) -> usize {
-        self.state.message_sets.len()
+        self.state.output.len()
     }
 
     pub fn go_to_next_page(&mut self) {
         let next_page = self.state.current_page + 1;
-        if next_page >= self.state.message_sets.len() {
+        if next_page >= self.state.output.len() {
             self.state.current_page = 0;
         } else {
             self.state.current_page = next_page;
@@ -106,15 +108,13 @@ impl Application {
         &self.state.error_message
     }
 
-    pub fn current_display_set(&self) -> Option<MessageSet> {
+    pub fn current_output(&self) -> Option<Output> {
         match self.mode() {
             Mode::CommandParameters => None,
-            Mode::EnterCommand => Some(self.state.command_message_set()),
-            Mode::Processing | Mode::Normal => self
-                .state
-                .message_sets
-                .get(self.state.current_page)
-                .cloned(),
+            Mode::EnterCommand => Some(Output::MessageSet(self.state.command_message_set())),
+            Mode::Processing | Mode::Normal => {
+                self.state.output.get(self.state.current_page).cloned()
+            }
         }
     }
 
@@ -177,6 +177,17 @@ impl Application {
         }
     }
 
+    fn message_sets(&self) -> Vec<&MessageSet> {
+        self.state
+            .output
+            .iter()
+            .filter_map(|output| match output {
+                super::Output::MessageSet(message_set) => Some(message_set),
+                super::Output::BarChart(_) => None,
+            })
+            .collect()
+    }
+
     async fn run_export_to_file(&mut self, output_folder: &str, format: Format) {
         let folder = OutputFolder {
             root: output_folder.to_string(),
@@ -186,19 +197,25 @@ impl Application {
         };
 
         let today = Local::now().format("%Y-%m-%d %H:%M:%S");
+        let message_sets: Vec<MessageSet> = self
+            .state
+            .output
+            .iter()
+            .filter_map(|output| match output {
+                super::Output::MessageSet(message_set) => Some(message_set.clone()),
+                super::Output::BarChart(_) => None,
+            })
+            .collect();
         writer
-            .write(
-                &self.state.message_sets,
-                &format!("messages_{}", &today),
-                format,
-            )
+            .write(&message_sets, &format!("messages_{}", &today), format)
             .await
             .unwrap();
         self.state.command_parameters = None;
     }
 
     pub fn copy_to_clipboard(&mut self) {
-        if self.state.message_sets.is_empty() {
+        let message_sets = self.message_sets();
+        if message_sets.is_empty() {
             return;
         }
 
@@ -211,9 +228,7 @@ impl Application {
                 return;
             }
         };
-        let text: Vec<String> = self
-            .state
-            .message_sets
+        let text: Vec<String> = message_sets
             .iter()
             .flat_map(|message_set| {
                 let mut message_set_text: Vec<String> = vec![message_set.title.clone()];
@@ -280,6 +295,9 @@ impl Application {
                 output_folder,
                 format,
             }) => self.run_export_to_file(&output_folder, format).await,
+            Some(CommandParameters::Chart { year }) => {
+                self.run_chart(year);
+            }
             None => {}
         }
     }
@@ -310,7 +328,7 @@ impl Application {
                 let parameters = CommandParameters::ProcessListens { files: paths };
                 self.state.command_parameters = Some(parameters);
 
-                self.state.message_sets.insert(0, message_set);
+                self.state.output.insert(0, Output::MessageSet(message_set));
             }
             Err(e) => {
                 self.reset_state(true);
@@ -343,10 +361,18 @@ impl Application {
 
             match self
                 .state
-                .message_sets
+                .output
                 .iter_mut()
-                .find(|set| set.title.eq("Process listens"))
-            {
+                .find_map(|output| match output {
+                    Output::MessageSet(set) => {
+                        if set.title.eq("Process listens") {
+                            Some(set)
+                        } else {
+                            None
+                        }
+                    }
+                    Output::BarChart(_) => None,
+                }) {
                 Some(it) => it.messages.append(&mut messages),
                 None => {
                     let message_set = MessageSet {
@@ -354,7 +380,7 @@ impl Application {
                         messages,
                     };
 
-                    self.state.message_sets.insert(0, message_set);
+                    self.state.output.insert(0, Output::MessageSet(message_set));
                 }
             }
 
@@ -362,10 +388,18 @@ impl Application {
         } else {
             match self
                 .state
-                .message_sets
+                .output
                 .iter_mut()
-                .find(|set| set.title.eq("Process listens"))
-            {
+                .find_map(|output| match output {
+                    Output::MessageSet(set) => {
+                        if set.title.eq("Process listens") {
+                            Some(set)
+                        } else {
+                            None
+                        }
+                    }
+                    Output::BarChart(_) => None,
+                }) {
                 Some(it) => it.messages.push("Done processing".to_string()),
                 None => {
                     let message_set = MessageSet {
@@ -373,14 +407,40 @@ impl Application {
                         messages: vec!["Done processing".to_string()],
                     };
 
-                    self.state.message_sets.insert(0, message_set);
+                    self.state.output.insert(0, Output::MessageSet(message_set));
                 }
             }
             self.state.command_parameters = None;
         }
     }
 
+    fn run_chart(&mut self, year: i32) {
+        if let Some(year_count) = self.processor.year_count(year) {
+            let mut month_counts = year_count.month_counts();
+            month_counts.sort_by_key(|month_count| month_count.month);
+            let data_points: Vec<BarDataPoint> = month_counts
+                .iter()
+                .map(|month_count| {
+                    BarDataPoint::new(
+                        format!("{:02}", month_count.month),
+                        month_count.artists_counts.total_count(),
+                    )
+                })
+                .collect();
+            self.state.output.insert(0, Output::BarChart(super::BarChart { title: format!("Bar Chart {year}"), data_points }));
+        } else {
+            let message_set = MessageSet {
+                title: format!("Chart (year: {year})"),
+                messages: vec!["No data for year".to_string()],
+            };
+            self.state.output.insert(0, Output::MessageSet(message_set));
+        }
+
+        self.state.command_parameters = None;
+    }
+
     fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>, month: Option<u32>) {
+        println!("{:?}", year);
         match (year, month) {
             (None, None) => self.top_artists(artist_count),
             (None, Some(m)) => self.top_artists_for_month(artist_count, m),
@@ -401,8 +461,8 @@ impl Application {
             .map(|counter| counter.total_plays_display())
             .collect();
         self.state
-            .message_sets
-            .insert(0, MessageSet { title, messages });
+            .output
+            .insert(0, Output::MessageSet(MessageSet { title, messages }));
     }
 
     fn top_artists_for_year_month(&mut self, artist_count: usize, year: i32, month: u32) {
@@ -415,16 +475,24 @@ impl Application {
                     .map(|counter| counter.total_plays_display())
                     .collect();
                 self.state
-                    .message_sets
-                    .insert(0, MessageSet { title, messages })
+                    .output
+                    .insert(0, Output::MessageSet(MessageSet { title, messages }))
+            } else {
+                self.state.output.insert(
+                    0,
+                    Output::MessageSet(MessageSet {
+                        title,
+                        messages: vec!["No artists found".to_string()],
+                    }),
+                );
             }
         } else {
-            self.state.message_sets.insert(
+            self.state.output.insert(
                 0,
-                MessageSet {
+                Output::MessageSet(MessageSet {
                     title,
                     messages: vec!["No artists found".to_string()],
-                },
+                }),
             );
         }
     }
@@ -438,15 +506,15 @@ impl Application {
                 .map(|counter| counter.total_plays_display())
                 .collect();
             self.state
-                .message_sets
-                .insert(0, MessageSet { title, messages })
+                .output
+                .insert(0, Output::MessageSet(MessageSet { title, messages }))
         } else {
-            self.state.message_sets.insert(
+            self.state.output.insert(
                 0,
-                MessageSet {
+                Output::MessageSet(MessageSet {
                     title,
                     messages: vec!["No artists found".to_string()],
-                },
+                }),
             );
         }
     }
@@ -459,8 +527,8 @@ impl Application {
             .map(|counter| counter.total_plays_display())
             .collect();
         self.state
-            .message_sets
-            .insert(0, MessageSet { title, messages })
+            .output
+            .insert(0, Output::MessageSet(MessageSet { title, messages }))
     }
 
     fn run_top_songs(&mut self, count: usize, year: Option<i32>) {
@@ -473,15 +541,15 @@ impl Application {
                     .map(|count| format!("{count}"))
                     .collect();
                 self.state
-                    .message_sets
-                    .insert(0, MessageSet { title, messages })
+                    .output
+                    .insert(0, Output::MessageSet(MessageSet { title, messages }))
             } else {
-                self.state.message_sets.insert(
+                self.state.output.insert(
                     0,
-                    MessageSet {
+                    Output::MessageSet(MessageSet {
                         title,
                         messages: vec!["No artists found".to_string()],
-                    },
+                    }),
                 );
             }
         } else {
@@ -492,8 +560,8 @@ impl Application {
                 .map(|count| format!("{count}"))
                 .collect();
             self.state
-                .message_sets
-                .insert(0, MessageSet { title, messages })
+                .output
+                .insert(0, Output::MessageSet(MessageSet { title, messages }))
         }
 
         self.state.command_parameters = None;
@@ -507,8 +575,8 @@ impl Application {
             .map(|song_count| format!("{song_count}"))
             .collect();
         self.state
-            .message_sets
-            .insert(0, MessageSet { title, messages });
+            .output
+            .insert(0, Output::MessageSet(MessageSet { title, messages }));
 
         self.state.command_parameters = None;
     }
@@ -565,8 +633,8 @@ impl Application {
         };
 
         self.state
-            .message_sets
-            .insert(0, MessageSet { title, messages });
+            .output
+            .insert(0, Output::MessageSet(MessageSet { title, messages }));
 
         self.state.command_parameters = None;
     }
@@ -588,12 +656,12 @@ impl Application {
         songs.sort();
         songs.dedup();
 
-        self.state.message_sets.insert(
+        self.state.output.insert(
             0,
-            MessageSet {
+            Output::MessageSet(MessageSet {
                 title: format!("Songs for {name}"),
                 messages: songs,
-            },
+            }),
         );
 
         self.state.command_parameters = None;
@@ -616,8 +684,8 @@ impl Application {
         };
 
         self.state
-            .message_sets
-            .insert(0, MessageSet { title, messages });
+            .output
+            .insert(0, Output::MessageSet(MessageSet { title, messages }));
 
         self.state.command_parameters = None;
     }
@@ -639,7 +707,7 @@ impl Application {
         message_sets.reverse();
 
         for message_set in message_sets.into_iter() {
-            self.state.message_sets.insert(0, message_set);
+            self.state.output.insert(0, Output::MessageSet(message_set));
         }
 
         self.state.command_parameters = None;

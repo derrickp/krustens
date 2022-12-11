@@ -3,7 +3,7 @@ use strum::IntoEnumIterator;
 
 use crate::{errors::InteractiveError, persistence::Format};
 
-use super::{CommandName, CommandParameterSpec, CommandParameters, MessageSet, Mode};
+use super::{CommandName, CommandParameterSpec, CommandParameters, MessageSet, Mode, Output};
 
 #[derive(Default)]
 pub struct State {
@@ -11,11 +11,11 @@ pub struct State {
     pub mode: Mode,
     pub command_name: Option<CommandName>,
     pub error_message: Option<String>,
-    pub message_sets: Vec<MessageSet>,
     pub command_parameter_inputs: Vec<CommandParameterSpec>,
     pub command_parameters: Option<CommandParameters>,
     pub processing_messages: Vec<MessageSet>,
     pub current_page: usize,
+    pub output: Vec<Output>,
 }
 
 impl State {
@@ -36,32 +36,18 @@ impl State {
         spec: &CommandParameterSpec,
     ) -> Result<(), InteractiveError> {
         match spec {
-            CommandParameterSpec::Year {
-                optional,
-                description: _,
-            } => {
+            CommandParameterSpec::Year { description: _ } => {
                 if let Ok(year) = text.parse::<i32>() {
                     self.add_year_parameter(year);
                     Ok(())
-                } else if !optional {
-                    Err(InteractiveError::RequiredParameterNotSet {
-                        name: "year".to_string(),
-                    })
                 } else {
                     Ok(())
                 }
             }
-            CommandParameterSpec::Month {
-                optional,
-                description: _,
-            } => {
+            CommandParameterSpec::Month { description: _ } => {
                 if let Some(month) = text.parse::<u32>().ok().filter(|m| (&1..=&12).contains(&m)) {
                     self.add_month_parameter(month);
                     Ok(())
-                } else if !optional {
-                    Err(InteractiveError::RequiredParameterNotSet {
-                        name: "month".to_string(),
-                    })
                 } else {
                     Ok(())
                 }
@@ -80,25 +66,21 @@ impl State {
 
                 Ok(())
             }
-            CommandParameterSpec::Date {
-                optional: _,
-                description: _,
-            } => match NaiveDate::parse_from_str(text, "%Y-%m-%d") {
-                Ok(date) => {
-                    self.add_date_parameter(date);
-                    Ok(())
+            CommandParameterSpec::Date { description: _ } => {
+                match NaiveDate::parse_from_str(text, "%Y-%m-%d") {
+                    Ok(date) => {
+                        self.add_date_parameter(date);
+                        Ok(())
+                    }
+                    Err(e) => Err(InteractiveError::ParsingIssue {
+                        message: e.to_string(),
+                    }),
                 }
-                Err(e) => Err(InteractiveError::ParsingIssue {
-                    message: e.to_string(),
-                }),
-            },
-            CommandParameterSpec::ArtistName {
-                optional,
-                description: _,
-            } => {
-                if text.is_empty() && !optional {
+            }
+            CommandParameterSpec::ArtistName { description: _ } => {
+                if text.is_empty() {
                     Err(InteractiveError::RequiredParameterNotSet {
-                        name: "name".to_string(),
+                        name: "artist name".to_string(),
                     })
                 } else {
                     self.add_name_parameter(text);

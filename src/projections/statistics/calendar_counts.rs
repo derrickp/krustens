@@ -32,6 +32,10 @@ impl YearCounts {
             .unwrap_or_default()
     }
 
+    pub fn month_counts(&self) -> Vec<&MonthCounts> {
+        self.months.values().collect()
+    }
+
     pub fn add_song_play(
         &mut self,
         date: &NaiveDate,
