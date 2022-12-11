@@ -16,7 +16,7 @@ use tui::{
 };
 
 use crate::{
-    app::{Application, Mode, State},
+    app::{Application, Mode},
     errors::InteractiveError,
     persistence::EventStore,
     projections::ListenTrackerRepository,
@@ -78,7 +78,7 @@ pub async fn full_ui(
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &app.state))?;
+        terminal.draw(|f| ui(f, &app))?;
 
         // Poll for an event, we do this so that we don't block on waiting for an event.
         // If we blocked, then we wouldn't tick the app to the next stage.
@@ -95,6 +95,12 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
                         KeyCode::Char('c') => {
                             app.copy_to_clipboard();
                         }
+                        KeyCode::Right => {
+                            app.go_to_next_page();
+                        }
+                        KeyCode::Left => {
+                            app.go_to_previous_page();
+                        }
                         _ => {}
                     },
                     Mode::EnterCommand => match key.code {
@@ -102,10 +108,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
                             app.command_name_entered();
                         }
                         KeyCode::Char(c) => {
-                            app.state.input.push(c);
+                            app.push_input_char(c);
                         }
                         KeyCode::Backspace => {
-                            app.state.input.pop();
+                            app.pop_input_char();
                         }
                         KeyCode::Esc => {
                             app.cancel_command();
@@ -120,10 +126,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
                             app.advance_command_input();
                         }
                         KeyCode::Char(c) => {
-                            app.state.input.push(c);
+                            app.push_input_char(c);
                         }
                         KeyCode::Backspace => {
-                            app.state.input.pop();
+                            app.pop_input_char();
                         }
                         KeyCode::Esc => {
                             app.cancel_command();
@@ -141,7 +147,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
+fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
@@ -155,7 +161,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
         )
         .split(f.size());
 
-    let (msg, style) = match app.mode {
+    let (msg, style) = match app.mode() {
         Mode::Normal => (
             vec![
                 Span::raw("Press "),
@@ -164,7 +170,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
                 Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to enter command, "),
                 Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to copy current output to clipboard."),
+                Span::raw(" to copy all output, "),
+                Span::styled("< and >", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to go back and forward in output."),
             ],
             Style::default().add_modifier(Modifier::RAPID_BLINK),
         ),
@@ -179,8 +187,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
             Style::default(),
         ),
         Mode::CommandParameters => {
-            if let Some(spec) = app.command_parameter_inputs.get(0) {
-                (vec![Span::raw(spec.description())], Style::default())
+            if let Some(description) = app.current_parameter_description() {
+                (vec![Span::raw(description)], Style::default())
             } else {
                 (Vec::new(), Style::default())
             }
@@ -192,20 +200,20 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
     let help_message = Paragraph::new(text);
     f.render_widget(help_message, chunks[0]);
 
-    let input = Paragraph::new(app.input.as_ref())
-        .style(match app.mode {
+    let input = Paragraph::new(app.current_input())
+        .style(match app.mode() {
             Mode::EnterCommand | Mode::CommandParameters => Style::default().fg(Color::Yellow),
             _ => Style::default(),
         })
         .block(Block::default().borders(Borders::ALL).title("Input"));
     f.render_widget(input, chunks[1]);
 
-    match app.mode {
+    match app.mode() {
         Mode::EnterCommand | Mode::CommandParameters => {
             // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
             f.set_cursor(
                 // Put cursor past the end of the input text
-                chunks[1].x + app.input.width() as u16 + 1,
+                chunks[1].x + app.current_input().width() as u16 + 1,
                 // Move one line down, from the border to the input line
                 chunks[1].y + 1,
             )
@@ -217,7 +225,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
 
     let mut messages: Vec<ListItem> = Vec::new();
 
-    if let Some(error_message) = &app.error_message {
+    if let Some(error_message) = app.error_message() {
         let content = vec![Spans::from(Span::styled(
             format!("Error: {error_message}"),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
@@ -225,9 +233,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
         messages.push(ListItem::new(content));
     }
 
-    let include_number = !matches!(app.mode, Mode::EnterCommand);
-
-    for message_set in app.display_sets().iter() {
+    let include_number = !matches!(app.mode(), Mode::EnterCommand);
+    if let Some(message_set) = app.current_display_set() {
         let content = vec![Spans::from(Span::styled(
             message_set.title.clone(),
             Style::default().add_modifier(Modifier::UNDERLINED),
@@ -245,10 +252,18 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
         }
     }
 
-    let messages = List::new(messages).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Messages (overflown text not shown, copy or write to file to see)"),
-    );
-    f.render_widget(messages, chunks[2]);
+    let current_page = app.current_page_display();
+    let max_pages = app.num_pages();
+
+    let body_title = match app.mode() {
+        Mode::CommandParameters => "".to_string(),
+        Mode::EnterCommand => "Enter Command".to_string(),
+        Mode::Normal | Mode::Processing => {
+            format!("Output (page {current_page} of {max_pages}) overflown text not shown, copy or export")
+        }
+    };
+
+    let blocks =
+        List::new(messages).block(Block::default().borders(Borders::ALL).title(body_title));
+    f.render_widget(blocks, chunks[2]);
 }

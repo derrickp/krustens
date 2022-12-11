@@ -50,6 +50,74 @@ impl Application {
         Ok(())
     }
 
+    pub fn current_page_display(&self) -> usize {
+        if self.state.message_sets.is_empty() {
+            0
+        } else {
+            self.state.current_page + 1
+        }
+    }
+
+    pub fn num_pages(&self) -> usize {
+        self.state.message_sets.len()
+    }
+
+    pub fn go_to_next_page(&mut self) {
+        let next_page = self.state.current_page + 1;
+        if next_page >= self.state.message_sets.len() {
+            self.state.current_page = 0;
+        } else {
+            self.state.current_page = next_page;
+        }
+    }
+
+    pub fn go_to_previous_page(&mut self) {
+        if self.state.current_page == 0 {
+            return;
+        }
+
+        self.state.current_page -= 1;
+    }
+
+    pub fn push_input_char(&mut self, c: char) {
+        self.state.input.push(c);
+    }
+
+    pub fn pop_input_char(&mut self) {
+        self.state.input.pop();
+    }
+
+    pub fn current_input(&self) -> &str {
+        &self.state.input
+    }
+
+    pub fn mode(&self) -> &Mode {
+        &self.state.mode
+    }
+
+    pub fn current_parameter_description(&self) -> Option<String> {
+        self.state
+            .command_parameter_inputs
+            .get(0)
+            .map(|spec| spec.description())
+    }
+
+    pub fn error_message(&self) -> &Option<String> {
+        &self.state.error_message
+    }
+
+    pub fn current_display_set(&self) -> Option<MessageSet> {
+        match self.mode() {
+            Mode::CommandParameters => None,
+            Mode::EnterCommand => Some(self.state.command_message_set()),
+            Mode::Processing | Mode::Normal => self
+                .state
+                .message_sets
+                .get(self.state.current_page)
+                .cloned(),
+        }
+    }
+
     pub fn autocomplete_command_name(&mut self) {
         let names: Vec<CommandName> = CommandName::iter()
             .filter(|name| name.to_string().starts_with(&self.state.input))

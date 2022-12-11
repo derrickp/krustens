@@ -15,24 +15,18 @@ pub struct State {
     pub command_parameter_inputs: Vec<CommandParameterSpec>,
     pub command_parameters: Option<CommandParameters>,
     pub processing_messages: Vec<MessageSet>,
+    pub current_page: usize,
 }
 
 impl State {
-    pub fn display_sets(&self) -> Vec<MessageSet> {
-        match self.mode {
-            Mode::CommandParameters => Vec::new(),
-            Mode::EnterCommand => {
-                let mut messages: Vec<String> = CommandName::iter()
-                    .map(|command| format!("{} - {}", command.to_string(), command.description()))
-                    .collect();
-                messages.sort();
-
-                vec![MessageSet {
-                    title: "Commands".to_string(),
-                    messages,
-                }]
-            }
-            Mode::Normal | Mode::Processing => self.message_sets.to_vec(),
+    pub fn command_message_set(&self) -> MessageSet {
+        let mut messages: Vec<String> = CommandName::iter()
+            .map(|command| format!("{} - {}", command.to_string(), command.description()))
+            .collect();
+        messages.sort();
+        MessageSet {
+            title: "Commands".to_string(),
+            messages,
         }
     }
 
