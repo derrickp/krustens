@@ -1,6 +1,6 @@
 [package]
 name = "krustens"
-version = "4.2.0"
+version = "4.3.0"
 description = "A small application to generate json and yaml files of statistics based on Spotify and Apple Music streaming history files."
 edition = "2021"
 license = "MIT"
