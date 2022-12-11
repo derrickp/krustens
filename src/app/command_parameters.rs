@@ -4,6 +4,8 @@ use chrono::NaiveDate;
 
 use crate::persistence::Format;
 
+use super::chart::BarBreakdown;
+
 pub enum CommandParameterSpec {
     Year { description: String },
     Month { description: String },
@@ -14,6 +16,7 @@ pub enum CommandParameterSpec {
     InputFolder { description: String },
     OutputFolder { description: String },
     FileFormat { description: String },
+    BarBreakdown { description: String },
 }
 
 impl CommandParameterSpec {
@@ -27,7 +30,8 @@ impl CommandParameterSpec {
             | CommandParameterSpec::Count { description }
             | CommandParameterSpec::InputFolder { description }
             | CommandParameterSpec::OutputFolder { description }
-            | CommandParameterSpec::FileFormat { description } => description.clone(),
+            | CommandParameterSpec::FileFormat { description }
+            | CommandParameterSpec::BarBreakdown { description } => description.clone(),
         }
     }
 }
@@ -73,6 +77,7 @@ pub enum CommandParameters {
     },
     Chart {
         year: i32,
+        breakdown: BarBreakdown,
     },
 }
 
@@ -142,7 +147,20 @@ impl CommandParameters {
                 year: Some(year),
             },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
-            Self::Chart { year: _ } => Self::Chart { year },
+            Self::Chart { year: _, breakdown } => Self::Chart {
+                year,
+                breakdown: breakdown.to_owned(),
+            },
+            _ => self.to_owned(),
+        }
+    }
+
+    pub fn with_bar_breakdown_parameter(&self, breakdown: BarBreakdown) -> Self {
+        match self {
+            Self::Chart { year, breakdown: _ } => Self::Chart {
+                year: year.to_owned(),
+                breakdown,
+            },
             _ => self.to_owned(),
         }
     }

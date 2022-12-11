@@ -1,7 +1,13 @@
-use std::{collections::HashSet, fs, path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+    str::FromStr,
+    sync::Arc,
+};
 
 use arboard::Clipboard;
-use chrono::{Local, NaiveDate};
+use chrono::{Local, NaiveDate, Weekday};
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 
@@ -10,15 +16,15 @@ use crate::{
     persistence::{fs::FileWriter, EventStore, Format, Writer},
     processing,
     projections::{
-        statistics::{ArtistsCounts, EventProcessor, MonthCounts},
+        statistics::{order_in_week, ArtistsCounts, EventProcessor, MonthCounts},
         ListenTrackerRepository,
     },
     track_plays::ArtistName,
 };
 
 use super::{
-    chart::BarDataPoint, CommandName, CommandParameters, MessageSet, Mode, Output, OutputFolder,
-    State,
+    chart::{BarBreakdown, BarDataPoint},
+    CommandName, CommandParameters, MessageSet, Mode, Output, OutputFolder, State,
 };
 
 pub struct Application {
@@ -296,8 +302,8 @@ impl Application {
                 output_folder,
                 format,
             }) => self.run_export_to_file(&output_folder, format).await,
-            Some(CommandParameters::Chart { year }) => {
-                self.run_chart(year);
+            Some(CommandParameters::Chart { year, breakdown }) => {
+                self.run_chart(year, breakdown);
             }
             None => {}
         }
@@ -415,9 +421,52 @@ impl Application {
         }
     }
 
-    fn run_chart(&mut self, year: i32) {
-        if let Some(year_count) = self.processor.year_count(year) {
-            let mut month_counts = year_count.month_counts();
+    fn run_chart(&mut self, year: i32, breakdown: BarBreakdown) {
+        match breakdown {
+            BarBreakdown::Month => self.monthly_bar_chart(year),
+            BarBreakdown::Weekday => self.weekday_bar_chart(year),
+        }
+
+        self.state.command_parameters = None;
+    }
+
+    fn weekday_bar_chart(&mut self, year: i32) {
+        if let Some(year_counts) = self.processor.year_count(year) {
+            let mut weekday_counts: HashMap<Weekday, u64> = HashMap::new();
+            for month_count in year_counts.month_counts().iter() {
+                for day_count in month_count.day_counts().iter() {
+                    let count = weekday_counts
+                        .get(&day_count.weekday)
+                        .map(|existing| existing + day_count.artists_counts.total_count())
+                        .unwrap_or_else(|| day_count.artists_counts.total_count());
+                    weekday_counts.insert(day_count.weekday, count);
+                }
+            }
+            let mut entries: Vec<(Weekday, u64)> = weekday_counts.into_iter().collect();
+            entries.sort_by_key(|(weekday, _)| order_in_week(weekday));
+            let data_points = entries
+                .into_iter()
+                .map(|(weekday, count)| BarDataPoint::new(weekday.to_string(), count))
+                .collect();
+            self.state.output.insert(
+                0,
+                Output::BarChart(super::BarChart {
+                    title: format!("Weekday Bar Chart {year}"),
+                    data_points,
+                }),
+            );
+        } else {
+            let message_set = MessageSet {
+                title: format!("Monthly Bar Chart (year: {year})"),
+                messages: vec!["No data for year".to_string()],
+            };
+            self.state.output.insert(0, Output::MessageSet(message_set));
+        }
+    }
+
+    fn monthly_bar_chart(&mut self, year: i32) {
+        if let Some(year_counts) = self.processor.year_count(year) {
+            let mut month_counts = year_counts.month_counts();
             month_counts.sort_by_key(|month_count| month_count.month);
             let data_points: Vec<BarDataPoint> = month_counts
                 .iter()
@@ -431,19 +480,17 @@ impl Application {
             self.state.output.insert(
                 0,
                 Output::BarChart(super::BarChart {
-                    title: format!("Bar Chart {year}"),
+                    title: format!("Monthly Bar Chart {year}"),
                     data_points,
                 }),
             );
         } else {
             let message_set = MessageSet {
-                title: format!("Chart (year: {year})"),
+                title: format!("Monthly Bar Chart (year: {year})"),
                 messages: vec!["No data for year".to_string()],
             };
             self.state.output.insert(0, Output::MessageSet(message_set));
         }
-
-        self.state.command_parameters = None;
     }
 
     fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>, month: Option<u32>) {

@@ -5,7 +5,7 @@ use strum_macros::EnumIter;
 
 use crate::persistence::Format;
 
-use super::{CommandParameterSpec, CommandParameters};
+use super::{chart::BarBreakdown, CommandParameterSpec, CommandParameters};
 
 #[derive(Deserialize, Serialize, EnumIter, PartialEq, Debug)]
 pub enum CommandName {
@@ -121,7 +121,10 @@ impl CommandName {
             },
             Self::Chart => {
                 let default_year = chrono::Utc::now().year();
-                CommandParameters::Chart { year: default_year }
+                CommandParameters::Chart {
+                    year: default_year,
+                    breakdown: BarBreakdown::default(),
+                }
             }
         }
     }
@@ -204,6 +207,9 @@ impl CommandName {
             CommandName::Chart => vec![
                 CommandParameterSpec::Year {
                     description: "What year for the chart (defaults to current year)".to_string()
+                },
+                CommandParameterSpec::BarBreakdown {
+                    description: "How do you want to break down the data (weekday or month, defaults to month)".to_string()
                 }
             ]
         }

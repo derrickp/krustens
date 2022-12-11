@@ -7,7 +7,7 @@ mod song_counter;
 mod time_played;
 
 pub use artists_counts::ArtistsCounts;
-pub use calendar_counts::{DayCounts, MonthCounts, YearCounts};
+pub use calendar_counts::{order_in_week, DayCounts, MonthCounts, YearCounts};
 pub use event_processor::EventProcessor;
 pub use general::General;
 pub use song_count::{ArtistAndSongCount, SongCount};

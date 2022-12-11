@@ -3,7 +3,10 @@ use strum::IntoEnumIterator;
 
 use crate::{errors::InteractiveError, persistence::Format};
 
-use super::{CommandName, CommandParameterSpec, CommandParameters, MessageSet, Mode, Output};
+use super::{
+    chart::BarBreakdown, CommandName, CommandParameterSpec, CommandParameters, MessageSet, Mode,
+    Output,
+};
 
 #[derive(Default)]
 pub struct State {
@@ -105,6 +108,23 @@ impl State {
                 }
                 Ok(())
             }
+            CommandParameterSpec::BarBreakdown { description: _ } => {
+                if let Ok(breakdown) = BarBreakdown::try_from(text) {
+                    self.add_bar_breakdown_parameter(breakdown);
+                }
+
+                Ok(())
+            }
+        }
+    }
+
+    fn add_bar_breakdown_parameter(&mut self, breakdown: BarBreakdown) {
+        if self.command_parameters.is_none() {
+            self.set_default_command_parameters();
+        }
+
+        if let Some(parameters) = &self.command_parameters {
+            self.command_parameters = Some(parameters.with_bar_breakdown_parameter(breakdown));
         }
     }
 
