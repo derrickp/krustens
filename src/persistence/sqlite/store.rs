@@ -3,8 +3,8 @@ use sqlx::{sqlite::SqliteRow, Pool, Row, Sqlite};
 
 use crate::{
     errors::{AddEventError, GetEventsError},
-    events::{Event, EventData, EventStream},
     persistence::EventStore,
+    processing::events::{Event, EventData, EventStream},
 };
 
 pub struct SqliteEventStore {

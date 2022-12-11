@@ -1,4 +1,4 @@
-use crate::events::Event;
+use crate::processing::events::Event;
 
 use super::ListenTracker;
 

@@ -1,5 +1,4 @@
 mod errors;
-mod events;
 mod interactive;
 mod persistence;
 mod processing;

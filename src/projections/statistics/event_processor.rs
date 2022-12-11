@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{Datelike, NaiveDate};
 
 use crate::{
-    events::{Event, EventData},
+    processing::events::{Event, EventData},
     track_plays::ArtistName,
     utils::parse_formatted_end_time,
 };
