@@ -1,14 +1,14 @@
+mod app;
 mod errors;
-mod interactive;
 mod persistence;
 mod processing;
 mod projections;
+mod render;
 mod track_plays;
 mod utils;
 
 use std::sync::Arc;
 
-use interactive::full_ui;
 use persistence::sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore};
 use tokio::sync::Mutex;
 
@@ -23,6 +23,6 @@ async fn main() -> Result<(), std::io::Error> {
     let repository = Arc::new(Mutex::new(
         listen_tracker_repo(20_000, &pool, store.clone()).await,
     ));
-    full_ui(store, repository).await.unwrap();
+    render::full_ui(store, repository).await.unwrap();
     Ok(())
 }

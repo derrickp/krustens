@@ -3,36 +3,36 @@ use strum::IntoEnumIterator;
 
 use crate::{errors::InteractiveError, persistence::Format};
 
-use super::{AppMessageSet, AppMode, CommandName, CommandParameterSpec, CommandParameters};
+use super::{CommandName, CommandParameterSpec, CommandParameters, MessageSet, Mode};
 
 #[derive(Default)]
-pub struct AppState {
+pub struct State {
     pub input: String,
-    pub mode: AppMode,
+    pub mode: Mode,
     pub command_name: Option<CommandName>,
     pub error_message: Option<String>,
-    pub message_sets: Vec<AppMessageSet>,
+    pub message_sets: Vec<MessageSet>,
     pub command_parameter_inputs: Vec<CommandParameterSpec>,
     pub command_parameters: Option<CommandParameters>,
-    pub processing_messages: Vec<AppMessageSet>,
+    pub processing_messages: Vec<MessageSet>,
 }
 
-impl AppState {
-    pub fn display_sets(&self) -> Vec<AppMessageSet> {
+impl State {
+    pub fn display_sets(&self) -> Vec<MessageSet> {
         match self.mode {
-            AppMode::CommandParameters => Vec::new(),
-            AppMode::EnterCommand => {
+            Mode::CommandParameters => Vec::new(),
+            Mode::EnterCommand => {
                 let mut messages: Vec<String> = CommandName::iter()
                     .map(|command| format!("{} - {}", command.to_string(), command.description()))
                     .collect();
                 messages.sort();
 
-                vec![AppMessageSet {
+                vec![MessageSet {
                     title: "Commands".to_string(),
                     messages,
                 }]
             }
-            AppMode::Normal | AppMode::Processing => self.message_sets.to_vec(),
+            Mode::Normal | Mode::Processing => self.message_sets.to_vec(),
         }
     }
 

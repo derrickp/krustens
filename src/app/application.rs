@@ -16,25 +16,25 @@ use crate::{
     track_plays::ArtistName,
 };
 
-use super::{AppMessageSet, AppMode, AppState, CommandName, CommandParameters, OutputFolder};
+use super::{CommandName, CommandParameters, MessageSet, Mode, OutputFolder, State};
 
-pub struct App {
+pub struct Application {
     store: Arc<dyn EventStore>,
     repository: Arc<Mutex<dyn ListenTrackerRepository>>,
     pub processor: EventProcessor,
-    pub state: AppState,
+    pub state: State,
 }
 
-impl App {
+impl Application {
     pub fn new(
         store: Arc<dyn EventStore>,
         repository: Arc<Mutex<dyn ListenTrackerRepository>>,
-    ) -> App {
-        App {
+    ) -> Application {
+        Application {
             store,
             repository,
             processor: EventProcessor::default(),
-            state: AppState::default(),
+            state: State::default(),
         }
     }
 
@@ -62,14 +62,14 @@ impl App {
 
     pub async fn tick(&mut self) -> Result<(), InteractiveError> {
         match self.state.mode {
-            AppMode::CommandParameters => {}
-            AppMode::EnterCommand => {}
-            AppMode::Normal => {}
-            AppMode::Processing => {
+            Mode::CommandParameters => {}
+            Mode::EnterCommand => {}
+            Mode::Normal => {}
+            Mode::Processing => {
                 self.run_command().await;
                 if self.state.command_parameters.is_none() {
                     self.reset_state(false);
-                    self.state.mode = AppMode::Normal;
+                    self.state.mode = Mode::Normal;
                 }
             }
         }
@@ -82,13 +82,13 @@ impl App {
         match self.state.insert_command_parameter(&text, &spec) {
             Ok(_) => {
                 if self.state.command_parameter_inputs.is_empty() {
-                    self.state.mode = AppMode::Processing;
+                    self.state.mode = Mode::Processing;
                 }
             }
             Err(e) => {
                 self.reset_state(true);
                 self.state.error_message = Some(e.to_string());
-                self.state.mode = AppMode::Normal;
+                self.state.mode = Mode::Normal;
             }
         }
     }
@@ -100,10 +100,10 @@ impl App {
                 self.state.command_parameter_inputs = it.parameters();
                 self.state.command_parameters = Some(it.default_parameters());
                 self.state.command_name = Some(it);
-                self.state.mode = AppMode::CommandParameters;
+                self.state.mode = Mode::CommandParameters;
             }
             Err(_) => {
-                self.state.mode = AppMode::Normal;
+                self.state.mode = Mode::Normal;
                 self.state.error_message = Some("Unknown command name".to_string());
             }
         }
@@ -170,12 +170,12 @@ impl App {
 
     pub fn start_command_input(&mut self) {
         self.reset_state(true);
-        self.state.mode = AppMode::EnterCommand;
+        self.state.mode = Mode::EnterCommand;
     }
 
     pub fn cancel_command(&mut self) {
         self.reset_state(true);
-        self.state.mode = AppMode::Normal;
+        self.state.mode = Mode::Normal;
     }
 
     pub async fn run_command(&mut self) {
@@ -235,7 +235,7 @@ impl App {
                     None => vec![format!("Found {} possible files", paths.len())],
                 };
 
-                let message_set = AppMessageSet {
+                let message_set = MessageSet {
                     title: "Process listens".to_string(),
                     messages,
                 };
@@ -281,7 +281,7 @@ impl App {
             {
                 Some(it) => it.messages.append(&mut messages),
                 None => {
-                    let message_set = AppMessageSet {
+                    let message_set = MessageSet {
                         title: "Process listens".to_string(),
                         messages,
                     };
@@ -300,7 +300,7 @@ impl App {
             {
                 Some(it) => it.messages.push("Done processing".to_string()),
                 None => {
-                    let message_set = AppMessageSet {
+                    let message_set = MessageSet {
                         title: "Process listens".to_string(),
                         messages: vec!["Done processing".to_string()],
                     };
@@ -334,7 +334,7 @@ impl App {
             .collect();
         self.state
             .message_sets
-            .insert(0, AppMessageSet { title, messages });
+            .insert(0, MessageSet { title, messages });
     }
 
     fn top_artists_for_year_month(&mut self, artist_count: usize, year: i32, month: u32) {
@@ -348,12 +348,12 @@ impl App {
                     .collect();
                 self.state
                     .message_sets
-                    .insert(0, AppMessageSet { title, messages })
+                    .insert(0, MessageSet { title, messages })
             }
         } else {
             self.state.message_sets.insert(
                 0,
-                AppMessageSet {
+                MessageSet {
                     title,
                     messages: vec!["No artists found".to_string()],
                 },
@@ -371,11 +371,11 @@ impl App {
                 .collect();
             self.state
                 .message_sets
-                .insert(0, AppMessageSet { title, messages })
+                .insert(0, MessageSet { title, messages })
         } else {
             self.state.message_sets.insert(
                 0,
-                AppMessageSet {
+                MessageSet {
                     title,
                     messages: vec!["No artists found".to_string()],
                 },
@@ -392,7 +392,7 @@ impl App {
             .collect();
         self.state
             .message_sets
-            .insert(0, AppMessageSet { title, messages })
+            .insert(0, MessageSet { title, messages })
     }
 
     fn run_top_songs(&mut self, count: usize, year: Option<i32>) {
@@ -406,11 +406,11 @@ impl App {
                     .collect();
                 self.state
                     .message_sets
-                    .insert(0, AppMessageSet { title, messages })
+                    .insert(0, MessageSet { title, messages })
             } else {
                 self.state.message_sets.insert(
                     0,
-                    AppMessageSet {
+                    MessageSet {
                         title,
                         messages: vec!["No artists found".to_string()],
                     },
@@ -425,7 +425,7 @@ impl App {
                 .collect();
             self.state
                 .message_sets
-                .insert(0, AppMessageSet { title, messages })
+                .insert(0, MessageSet { title, messages })
         }
 
         self.state.command_parameters = None;
@@ -440,7 +440,7 @@ impl App {
             .collect();
         self.state
             .message_sets
-            .insert(0, AppMessageSet { title, messages });
+            .insert(0, MessageSet { title, messages });
 
         self.state.command_parameters = None;
     }
@@ -498,7 +498,7 @@ impl App {
 
         self.state
             .message_sets
-            .insert(0, AppMessageSet { title, messages });
+            .insert(0, MessageSet { title, messages });
 
         self.state.command_parameters = None;
     }
@@ -522,7 +522,7 @@ impl App {
 
         self.state.message_sets.insert(
             0,
-            AppMessageSet {
+            MessageSet {
                 title: format!("Songs for {name}"),
                 messages: songs,
             },
@@ -549,7 +549,7 @@ impl App {
 
         self.state
             .message_sets
-            .insert(0, AppMessageSet { title, messages });
+            .insert(0, MessageSet { title, messages });
 
         self.state.command_parameters = None;
     }
@@ -559,7 +559,7 @@ impl App {
             if let Some(year_counts) = self.processor.year_count(y) {
                 self.summarize_to_message_sets(&year, &year_counts.artists_counts)
             } else {
-                vec![AppMessageSet {
+                vec![MessageSet {
                     title: format!("Statistics for {y}"),
                     messages: vec!["No statistics gathered".to_string()],
                 }]
@@ -581,7 +581,7 @@ impl App {
         &self,
         year: &Option<i32>,
         artist_counts: &ArtistsCounts,
-    ) -> Vec<AppMessageSet> {
+    ) -> Vec<MessageSet> {
         let general = artist_counts.general_stats(5);
         let total_played_message = if artist_counts.time_played.time_hr > 2.0 {
             format!(
@@ -611,7 +611,7 @@ impl App {
             .unwrap_or_else(|| "Most listened songs (unique artist, year: None)".to_string());
 
         vec![
-            AppMessageSet {
+            MessageSet {
                 title: general_stats_title,
                 messages: vec![
                     format!(
@@ -621,15 +621,15 @@ impl App {
                     total_played_message,
                 ],
             },
-            AppMessageSet {
+            MessageSet {
                 title: most_listened_title,
                 messages: general.artist_total_plays.to_vec(),
             },
-            AppMessageSet {
+            MessageSet {
                 title: most_listened_songs_title,
                 messages: general.most_played_songs.to_vec(),
             },
-            AppMessageSet {
+            MessageSet {
                 title: most_listened_songs_unique_artist_title,
                 messages: general.artist_most_played_songs.to_vec(),
             },

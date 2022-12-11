@@ -16,18 +16,19 @@ use tui::{
 };
 
 use crate::{
-    errors::InteractiveError, persistence::EventStore, projections::ListenTrackerRepository,
+    app::{Application, Mode, State},
+    errors::InteractiveError,
+    persistence::EventStore,
+    projections::ListenTrackerRepository,
 };
 
 use unicode_width::UnicodeWidthStr;
-
-use super::{App, AppMode, AppState};
 
 pub async fn full_ui(
     store: Arc<dyn EventStore>,
     repository: Arc<Mutex<dyn ListenTrackerRepository>>,
 ) -> Result<(), InteractiveError> {
-    let mut app = App::new(store, repository);
+    let mut app = Application::new(store, repository);
     app.initialize().await?;
 
     println!("Loading...");
@@ -75,7 +76,7 @@ pub async fn full_ui(
     Ok(())
 }
 
-async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -> io::Result<()> {
     loop {
         terminal.draw(|f| ui(f, &app.state))?;
 
@@ -84,7 +85,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
         if poll(Duration::from_millis(15))? {
             if let Event::Key(key) = event::read()? {
                 match app.state.mode {
-                    AppMode::Normal => match key.code {
+                    Mode::Normal => match key.code {
                         KeyCode::Char('e') => {
                             app.start_command_input();
                         }
@@ -96,7 +97,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         }
                         _ => {}
                     },
-                    AppMode::EnterCommand => match key.code {
+                    Mode::EnterCommand => match key.code {
                         KeyCode::Enter => {
                             app.command_name_entered();
                         }
@@ -114,7 +115,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         }
                         _ => {}
                     },
-                    AppMode::CommandParameters => match key.code {
+                    Mode::CommandParameters => match key.code {
                         KeyCode::Enter => {
                             app.advance_command_input();
                         }
@@ -140,7 +141,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
+fn ui<B: Backend>(f: &mut Frame<B>, app: &State) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
@@ -155,7 +156,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         .split(f.size());
 
     let (msg, style) = match app.mode {
-        AppMode::Normal => (
+        Mode::Normal => (
             vec![
                 Span::raw("Press "),
                 Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
@@ -167,7 +168,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
             ],
             Style::default().add_modifier(Modifier::RAPID_BLINK),
         ),
-        AppMode::EnterCommand => (
+        Mode::EnterCommand => (
             vec![
                 Span::raw("Press "),
                 Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
@@ -177,7 +178,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
             ],
             Style::default(),
         ),
-        AppMode::CommandParameters => {
+        Mode::CommandParameters => {
             if let Some(spec) = app.command_parameter_inputs.get(0) {
                 (vec![Span::raw(spec.description())], Style::default())
             } else {
@@ -193,16 +194,14 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
 
     let input = Paragraph::new(app.input.as_ref())
         .style(match app.mode {
-            AppMode::EnterCommand | AppMode::CommandParameters => {
-                Style::default().fg(Color::Yellow)
-            }
+            Mode::EnterCommand | Mode::CommandParameters => Style::default().fg(Color::Yellow),
             _ => Style::default(),
         })
         .block(Block::default().borders(Borders::ALL).title("Input"));
     f.render_widget(input, chunks[1]);
 
     match app.mode {
-        AppMode::EnterCommand | AppMode::CommandParameters => {
+        Mode::EnterCommand | Mode::CommandParameters => {
             // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
             f.set_cursor(
                 // Put cursor past the end of the input text
@@ -226,7 +225,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &AppState) {
         messages.push(ListItem::new(content));
     }
 
-    let include_number = !matches!(app.mode, AppMode::EnterCommand);
+    let include_number = !matches!(app.mode, Mode::EnterCommand);
 
     for message_set in app.display_sets().iter() {
         let content = vec![Spans::from(Span::styled(

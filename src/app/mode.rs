@@ -1,12 +1,12 @@
 #[derive(Debug)]
-pub enum AppMode {
+pub enum Mode {
     CommandParameters,
     EnterCommand,
     Normal,
     Processing,
 }
 
-impl Default for AppMode {
+impl Default for Mode {
     fn default() -> Self {
         Self::Normal
     }
