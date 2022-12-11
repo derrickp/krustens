@@ -5,9 +5,11 @@ description = "A small application to generate json and yaml files of statistics
 edition = "2021"
 license = "MIT"
 exclude = [
+    ".github",
     ".vscode/*",
     ".fleet/*",
-    "build.sh"
+    "build.sh",
+    "remove_db.sh"
 ]
 readme = "README.md"
 homepage = "https://github.com/derrickp/krustens"
