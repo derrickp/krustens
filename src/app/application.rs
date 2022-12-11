@@ -17,7 +17,8 @@ use crate::{
 };
 
 use super::{
-    BarDataPoint, CommandName, CommandParameters, MessageSet, Mode, Output, OutputFolder, State,
+    chart::BarDataPoint, CommandName, CommandParameters, MessageSet, Mode, Output, OutputFolder,
+    State,
 };
 
 pub struct Application {
