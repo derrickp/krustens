@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::track_plays::ArtistName;
+use crate::track_plays::{ArtistName, TrackName};
 
 use super::{SongCount, TimePlayed};
 
@@ -53,15 +53,15 @@ impl SongCounter {
         self.total_song_plays
     }
 
-    pub fn increment_song(&mut self, song_name: &str, time_played: u64) {
+    pub fn increment_song(&mut self, track_name: &TrackName, time_played: u64) {
         match self
             .song_counts
             .iter_mut()
-            .find(|song_play_count| song_play_count.0.eq_ignore_ascii_case(song_name))
+            .find(|song_play_count| song_play_count.0.eq_ignore_ascii_case(track_name))
         {
             Some(it) => it.1 += 1,
             _ => {
-                let song_count = SongCount(song_name.to_string(), 1);
+                let song_count = SongCount(track_name.clone(), 1);
                 self.song_counts.push(song_count);
             }
         }

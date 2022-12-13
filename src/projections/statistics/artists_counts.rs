@@ -2,25 +2,29 @@ use std::{cmp::Reverse, collections::HashMap};
 
 use serde::Serialize;
 
-use crate::track_plays::ArtistName;
+use crate::track_plays::{ArtistName, TrackName};
 
 use super::{
-    song_counter::{ArtistSongCounter, SongCounter},
+    counter::{ArtistSongCounter, SongCounter},
     ArtistAndSongCount, General, TimePlayed,
 };
 
 #[derive(Clone, Default, Serialize)]
 pub struct ArtistsCounts {
-    pub artists: HashMap<ArtistName, SongCounter>,
-    pub time_played: TimePlayed,
-    pub skipped_artists: HashMap<ArtistName, SongCounter>,
+    artist_song_counters: HashMap<ArtistName, SongCounter>,
+    time_played: TimePlayed,
+    skipped_artists: HashMap<ArtistName, SongCounter>,
 }
 
 impl ArtistsCounts {
+    pub fn time_played(&self) -> &TimePlayed {
+        &self.time_played
+    }
+
     pub fn add(&mut self, other: &ArtistsCounts) {
         self.time_played.add_ms(other.time_played.time_ms);
-        for (artist_name, counter) in other.artists.iter() {
-            self.artists
+        for (artist_name, counter) in other.artist_song_counters.iter() {
+            self.artist_song_counters
                 .entry(artist_name.clone())
                 .or_insert(SongCounter::default())
                 .add(counter);
@@ -30,14 +34,14 @@ impl ArtistsCounts {
     }
 
     pub fn total_count(&self) -> u64 {
-        self.artists
+        self.artist_song_counters
             .values()
             .map(|song_counter| song_counter.total_song_plays())
             .sum()
     }
 
     pub fn find_artist(&self, name: &ArtistName) -> Option<ArtistSongCounter> {
-        self.artists.iter().find_map(|(n, v)| {
+        self.artist_song_counters.iter().find_map(|(n, v)| {
             if name.0.to_lowercase() == n.0.to_lowercase() {
                 Some(ArtistSongCounter {
                     artist_name: n.clone(),
@@ -49,7 +53,7 @@ impl ArtistsCounts {
         })
     }
 
-    pub fn add_song_skip(&mut self, artist_name: &ArtistName, song_name: &str) {
+    pub fn add_song_skip(&mut self, artist_name: &ArtistName, song_name: &TrackName) {
         let artist_counts = self
             .skipped_artists
             .entry(artist_name.clone())
@@ -57,18 +61,23 @@ impl ArtistsCounts {
         artist_counts.increment_song(song_name, 0);
     }
 
-    pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
+    pub fn add_song_play(
+        &mut self,
+        artist_name: &ArtistName,
+        track_name: &TrackName,
+        time_played: u64,
+    ) {
         self.time_played.add_ms(time_played);
         let song_counter = self
-            .artists
+            .artist_song_counters
             .entry(artist_name.clone())
             .or_insert_with(SongCounter::default);
 
-        song_counter.increment_song(song_name, time_played);
+        song_counter.increment_song(track_name, time_played);
     }
 
     pub fn over_min_plays(&self, min_plays: u64) -> Vec<ArtistSongCounter> {
-        self.artists
+        self.artist_song_counters
             .iter()
             .filter_map(|(name, counter)| {
                 if counter.total_song_plays() < min_plays {
@@ -85,7 +94,7 @@ impl ArtistsCounts {
 
     pub fn all(&self) -> Vec<ArtistSongCounter> {
         let mut counts: Vec<ArtistSongCounter> = self
-            .artists
+            .artist_song_counters
             .iter()
             .map(|(name, counter)| ArtistSongCounter {
                 artist_name: name.clone(),
@@ -98,7 +107,7 @@ impl ArtistsCounts {
 
     pub fn top(&self, count: usize) -> Vec<ArtistSongCounter> {
         let mut counts: Vec<ArtistSongCounter> = self
-            .artists
+            .artist_song_counters
             .iter()
             .map(|(name, counter)| ArtistSongCounter {
                 artist_name: name.clone(),
@@ -137,12 +146,12 @@ impl ArtistsCounts {
     }
 
     pub fn artist_count(&self) -> usize {
-        self.artists.len()
+        self.artist_song_counters.len()
     }
 
     pub fn top_unique_artists(&self, count: usize) -> Vec<ArtistSongCounter> {
         let mut counts: Vec<ArtistSongCounter> = self
-            .artists
+            .artist_song_counters
             .iter()
             .map(|(name, counter)| ArtistSongCounter {
                 artist_name: name.clone(),
@@ -156,7 +165,7 @@ impl ArtistsCounts {
 
     pub fn top_songs(&self, count: usize) -> Vec<ArtistAndSongCount> {
         let mut counts: Vec<ArtistAndSongCount> = self
-            .artists
+            .artist_song_counters
             .clone()
             .into_iter()
             .flat_map(|(artist_name, play_count)| {

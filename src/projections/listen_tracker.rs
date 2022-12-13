@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use crate::track_plays::{ArtistName, TrackName};
+
 use super::has_listen::HasListen;
 
 use serde::{Deserialize, Serialize};
@@ -11,7 +13,7 @@ pub struct ListenTracker {
 }
 
 impl HasListen for ListenTracker {
-    fn has_listen(&self, artist_name: &str, track_name: &str, end_time: &str) -> bool {
+    fn has_listen(&self, artist_name: &ArtistName, track_name: &TrackName, end_time: &str) -> bool {
         let id = build_id(artist_name, track_name, end_time);
         self.listens.contains(&id)
     }
@@ -21,6 +23,6 @@ impl HasListen for ListenTracker {
     }
 }
 
-pub fn build_id(artist_name: &str, track_name: &str, end_time: &str) -> String {
+pub fn build_id(artist_name: &ArtistName, track_name: &TrackName, end_time: &str) -> String {
     format!("{artist_name}-{track_name}-{end_time}")
 }
