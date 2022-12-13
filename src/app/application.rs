@@ -702,7 +702,7 @@ impl Application {
                     .play_details
                     .all_song_plays()
                     .iter()
-                    .map(|song_play| song_play.0.clone())
+                    .map(|song_play| song_play.0 .0.clone())
                     .collect()
             })
             .unwrap_or_default();

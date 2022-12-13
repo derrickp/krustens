@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::{track_plays::Normalized, utils::parse_end_time_rfc3339};
+use crate::{
+    track_plays::{ArtistName, Normalized, TrackName},
+    utils::parse_end_time_rfc3339,
+};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PlayActivity {
@@ -63,8 +66,8 @@ impl TryInto<Normalized> for PlayActivity {
             end_time,
             ms_played,
             skipped: Some(self.is_skipped_by_percent()),
-            artist_name: self.artist_name,
-            track_name: self.song_name,
+            artist_name: ArtistName(self.artist_name),
+            track_name: TrackName(self.song_name),
             track_ms: self.media_duration_ms,
             service_hint: "apple_music".to_string(),
         })

@@ -3,7 +3,7 @@ use std::u64;
 
 use crate::utils::{parse_end_time_rfc3339, parse_spotify_end_time};
 
-use super::Normalized;
+use super::{ArtistName, Normalized, TrackName};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Spotify {
@@ -39,13 +39,13 @@ impl TryInto<Normalized> for Spotify {
         };
 
         let artist_name = if let Some(artist_name) = self.artist_name {
-            artist_name
+            ArtistName(artist_name)
         } else {
             return Err(());
         };
 
         let track_name = if let Some(track_name) = self.track_name {
-            track_name
+            TrackName(track_name)
         } else {
             return Err(());
         };

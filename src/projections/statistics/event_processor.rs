@@ -64,23 +64,21 @@ impl EventProcessor {
                         .or_insert_with(|| YearCounts::from(&date));
                     year_counts.add_song_play(
                         &date,
-                        &ArtistName(listen.artist_name.clone()),
+                        &listen.artist_name,
                         &listen.track_name,
                         listen.ms_played,
                     );
                 }
 
                 self.artists_counts.add_song_play(
-                    &ArtistName(listen.artist_name.clone()),
+                    &listen.artist_name,
                     &listen.track_name,
                     listen.ms_played,
                 );
             }
             EventData::TrackPlayIgnored(ignored) => {
-                self.artists_counts.add_song_skip(
-                    &ArtistName(ignored.artist_name.clone()),
-                    &ignored.track_name,
-                );
+                self.artists_counts
+                    .add_song_skip(&ignored.artist_name, &ignored.track_name);
             }
         };
     }

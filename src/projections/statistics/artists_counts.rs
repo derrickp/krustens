@@ -2,7 +2,7 @@ use std::{cmp::Reverse, collections::HashMap};
 
 use serde::Serialize;
 
-use crate::track_plays::ArtistName;
+use crate::track_plays::{ArtistName, TrackName};
 
 use super::{
     counter::{ArtistSongCounter, SongCounter},
@@ -53,7 +53,7 @@ impl ArtistsCounts {
         })
     }
 
-    pub fn add_song_skip(&mut self, artist_name: &ArtistName, song_name: &str) {
+    pub fn add_song_skip(&mut self, artist_name: &ArtistName, song_name: &TrackName) {
         let artist_counts = self
             .skipped_artists
             .entry(artist_name.clone())
@@ -61,14 +61,19 @@ impl ArtistsCounts {
         artist_counts.increment_song(song_name, 0);
     }
 
-    pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
+    pub fn add_song_play(
+        &mut self,
+        artist_name: &ArtistName,
+        track_name: &TrackName,
+        time_played: u64,
+    ) {
         self.time_played.add_ms(time_played);
         let song_counter = self
             .artist_song_counters
             .entry(artist_name.clone())
             .or_insert_with(SongCounter::default);
 
-        song_counter.increment_song(song_name, time_played);
+        song_counter.increment_song(track_name, time_played);
     }
 
     pub fn over_min_plays(&self, min_plays: u64) -> Vec<ArtistSongCounter> {

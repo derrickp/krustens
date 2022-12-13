@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{Datelike, NaiveDate, Weekday};
 use serde::Serialize;
 
-use crate::track_plays::ArtistName;
+use crate::track_plays::{ArtistName, TrackName};
 
 use super::{artists_counts::ArtistsCounts, counter::ArtistSongCounter};
 
@@ -40,7 +40,7 @@ impl YearCounts {
         &mut self,
         date: &NaiveDate,
         artist_name: &ArtistName,
-        song_name: &str,
+        track_name: &TrackName,
         time_played: u64,
     ) {
         let month_count = self
@@ -48,9 +48,9 @@ impl YearCounts {
             .entry(date.month())
             .or_insert_with(|| MonthCounts::from(date));
 
-        month_count.add_song_play(date, artist_name, song_name, time_played);
+        month_count.add_song_play(date, artist_name, track_name, time_played);
         self.artists_counts
-            .add_song_play(artist_name, song_name, time_played);
+            .add_song_play(artist_name, track_name, time_played);
     }
 
     pub fn over_min_plays(&self, min: u64) -> Vec<ArtistSongCounter> {
@@ -98,7 +98,7 @@ impl MonthCounts {
         &mut self,
         date: &NaiveDate,
         artist_name: &ArtistName,
-        song_name: &str,
+        track_name: &TrackName,
         time_played: u64,
     ) {
         let day_counts = self
@@ -106,9 +106,9 @@ impl MonthCounts {
             .entry(date.day())
             .or_insert_with(|| DayCounts::from(date));
 
-        day_counts.add_song_play(artist_name, song_name, time_played);
+        day_counts.add_song_play(artist_name, track_name, time_played);
         self.artists_counts
-            .add_song_play(artist_name, song_name, time_played);
+            .add_song_play(artist_name, track_name, time_played);
     }
 
     pub fn over_min_plays(&self, min: u64) -> Vec<ArtistSongCounter> {
@@ -141,9 +141,14 @@ impl From<&NaiveDate> for DayCounts {
 }
 
 impl DayCounts {
-    pub fn add_song_play(&mut self, artist_name: &ArtistName, song_name: &str, time_played: u64) {
+    pub fn add_song_play(
+        &mut self,
+        artist_name: &ArtistName,
+        track_name: &TrackName,
+        time_played: u64,
+    ) {
         self.artists_counts
-            .add_song_play(artist_name, song_name, time_played);
+            .add_song_play(artist_name, track_name, time_played);
     }
 
     pub fn artists(&self) -> Vec<ArtistSongCounter> {

@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 use serde::Serialize;
 
-use crate::track_plays::ArtistName;
+use crate::track_plays::{ArtistName, TrackName};
 
 #[derive(Default, Serialize, Clone, Debug)]
-pub struct SongCount(pub String, pub u64);
+pub struct SongCount(pub TrackName, pub u64);
 
 impl Display for SongCount {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
