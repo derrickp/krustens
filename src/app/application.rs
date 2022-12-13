@@ -773,15 +773,15 @@ impl Application {
         artist_counts: &ArtistsCounts,
     ) -> Vec<MessageSet> {
         let general = artist_counts.general_stats(5);
-        let total_played_message = if artist_counts.time_played.time_hr > 2.0 {
+        let total_played_message = if artist_counts.time_played().time_hr > 2.0 {
             format!(
                 "Listened for {:.1} hours",
-                artist_counts.time_played.time_hr
+                artist_counts.time_played().time_hr
             )
         } else {
             format!(
                 "Listened for {:.1} minutes",
-                artist_counts.time_played.time_min
+                artist_counts.time_played().time_min
             )
         };
 

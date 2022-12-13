@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    calendar_counts::YearCounts, song_counter::ArtistSongCounter, ArtistAndSongCount,
-    ArtistsCounts, MonthCounts,
+    calendar_counts::YearCounts, counter::ArtistSongCounter, ArtistAndSongCount, ArtistsCounts,
+    MonthCounts,
 };
 
 #[derive(Default)]

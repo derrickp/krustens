@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::track_plays::ArtistName;
 
-use super::{artists_counts::ArtistsCounts, song_counter::ArtistSongCounter};
+use super::{artists_counts::ArtistsCounts, counter::ArtistSongCounter};
 
 #[derive(Clone)]
 pub struct YearCounts {
