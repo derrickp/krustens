@@ -8,12 +8,13 @@ use std::{
 
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate, Weekday};
+use log::info;
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 
 use crate::{
     errors::InteractiveError,
-    persistence::{fs::FileWriter, EventStore, Format, Writer},
+    persistence::{fs::FileWriter, EventStore, Format, OutputFolder, Writer},
     processing,
     projections::{
         statistics::{order_in_week, ArtistsCounts, EventProcessor, MonthCounts},
@@ -24,7 +25,7 @@ use crate::{
 
 use super::{
     chart::{BarBreakdown, BarDataPoint},
-    CommandName, CommandParameters, MessageSet, Mode, Output, OutputFolder, State,
+    CommandName, CommandParameters, MessageSet, Mode, Output, State,
 };
 
 pub struct Application {
@@ -172,6 +173,7 @@ impl Application {
         let text: String = self.state.input.drain(..).collect();
         match CommandName::from_str(&text) {
             Ok(it) => {
+                info!("{it:?}");
                 self.state.command_parameter_inputs = it.parameters();
                 self.state.command_parameters = Some(it.default_parameters());
                 self.state.command_name = Some(it);
