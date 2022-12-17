@@ -1,4 +1,4 @@
-use std::{fs::create_dir_all, path::Path};
+use std::{fmt::Display, fs::create_dir_all, path::Path};
 
 use crate::persistence::fs::Folder;
 
@@ -15,5 +15,11 @@ impl Folder for OutputFolder {
 
     fn path(&self) -> String {
         self.root.to_string()
+    }
+}
+
+impl Display for OutputFolder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.path())
     }
 }
