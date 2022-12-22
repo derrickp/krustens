@@ -2,8 +2,14 @@ use std::fmt::Display;
 
 use serde::{de::Visitor, Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct AlbumName(pub String);
+
+impl AlbumName {
+    pub fn eq_ignore_ascii_case(&self, other: &AlbumName) -> bool {
+        self.0.eq_ignore_ascii_case(&other.0)
+    }
+}
 
 impl Display for AlbumName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
