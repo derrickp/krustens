@@ -1,11 +1,12 @@
 use chrono::NaiveDateTime;
 
-use super::{ArtistName, TrackName};
+use super::{AlbumName, ArtistName, TrackName};
 
 pub struct Normalized {
     pub end_time: NaiveDateTime,
     pub artist_name: ArtistName,
     pub track_name: TrackName,
+    pub album_name: Option<AlbumName>,
     pub service_hint: String,
     pub ms_played: Option<u64>,
     pub track_ms: Option<u64>,
@@ -45,6 +46,7 @@ mod tests {
     fn is_skipped_by_percent() {
         let normalized = Normalized {
             end_time: NaiveDateTime::default(),
+            album_name: None,
             artist_name: ArtistName("artist".to_string()),
             track_name: TrackName("track".to_string()),
             service_hint: "apple_music".to_string(),

@@ -3,7 +3,7 @@ use std::u64;
 
 use crate::utils::{parse_end_time_rfc3339, parse_spotify_end_time};
 
-use super::{ArtistName, Normalized, TrackName};
+use super::{AlbumName, ArtistName, Normalized, TrackName};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Spotify {
@@ -52,6 +52,7 @@ impl TryInto<Normalized> for Spotify {
 
         Ok(Normalized {
             end_time,
+            album_name: self.album_name.map(AlbumName),
             artist_name,
             track_name,
             service_hint: "spotify".to_string(),

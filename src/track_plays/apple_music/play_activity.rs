@@ -1,12 +1,14 @@
 use serde::Deserialize;
 
 use crate::{
-    track_plays::{ArtistName, Normalized, TrackName},
+    track_plays::{AlbumName, ArtistName, Normalized, TrackName},
     utils::parse_end_time_rfc3339,
 };
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PlayActivity {
+    #[serde(alias = "Album Name")]
+    pub album_name: Option<String>,
     #[serde(alias = "Artist Name")]
     pub artist_name: String,
     #[serde(alias = "End Reason Type")]
@@ -66,6 +68,7 @@ impl TryInto<Normalized> for PlayActivity {
             end_time,
             ms_played,
             skipped: Some(self.is_skipped_by_percent()),
+            album_name: self.album_name.map(AlbumName),
             artist_name: ArtistName(self.artist_name),
             track_name: TrackName(self.song_name),
             track_ms: self.media_duration_ms,
@@ -97,6 +100,7 @@ mod tests {
     #[test]
     fn into_normalized() {
         let play_activity = PlayActivity {
+            album_name: None,
             artist_name: "Goatwhore".to_string(),
             end_reason_type: "NATURAL_END_OF_TRACK".to_string(),
             event_type: "PLAY_END".to_string(),
