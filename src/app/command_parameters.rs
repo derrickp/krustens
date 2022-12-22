@@ -49,6 +49,10 @@ pub enum CommandParameters {
         year: Option<i32>,
         month: Option<u32>,
     },
+    TopAlbums {
+        count: usize,
+        year: Option<i32>,
+    },
     TopSongs {
         count: usize,
         year: Option<i32>,
@@ -122,28 +126,29 @@ impl CommandParameters {
             Self::RandomArtists {
                 year: _,
                 month,
-                count: artist_count,
+                count,
                 min_listens,
             } => Self::RandomArtists {
                 year: Some(year),
                 month: month.to_owned(),
-                count: artist_count.to_owned(),
+                count: count.to_owned(),
                 min_listens: min_listens.to_owned(),
             },
             Self::TopArtists {
-                count: artist_count,
+                count,
                 year: _,
                 month,
             } => Self::TopArtists {
-                count: *artist_count,
+                count: count.to_owned(),
                 year: Some(year),
                 month: month.to_owned(),
             },
-            Self::TopSongs {
-                count: artist_count,
-                year: _,
-            } => Self::TopSongs {
-                count: *artist_count,
+            Self::TopAlbums { count, year: _ } => Self::TopAlbums {
+                count: count.to_owned(),
+                year: Some(year),
+            },
+            Self::TopSongs { count, year: _ } => Self::TopSongs {
+                count: count.to_owned(),
                 year: Some(year),
             },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
@@ -212,6 +217,10 @@ impl CommandParameters {
                 count,
                 year: year.to_owned(),
                 month: month.to_owned(),
+            },
+            Self::TopAlbums { count: _, year } => Self::TopAlbums {
+                count,
+                year: year.to_owned(),
             },
             Self::TopSongs { count: _, year } => Self::TopSongs {
                 count,

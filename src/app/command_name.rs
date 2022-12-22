@@ -15,6 +15,7 @@ pub enum CommandName {
     ArtistsOnDay,
     Summarize,
     ProcessListens,
+    TopAlbums,
     TopSongs,
     MostSkipped,
     Export,
@@ -34,6 +35,7 @@ impl ToString for CommandName {
             Self::MostSkipped => "most skipped".to_string(),
             Self::Export => "export".to_string(),
             Self::Chart => "chart".to_string(),
+            Self::TopAlbums => "top albums".to_string(),
         }
     }
 }
@@ -53,6 +55,7 @@ impl FromStr for CommandName {
             "most skipped" => Ok(Self::MostSkipped),
             "export" => Ok(Self::Export),
             "chart" => Ok(Self::Chart),
+            "top albums" => Ok(Self::TopAlbums),
             _ => Err("Unknown text".to_string()),
         }
     }
@@ -60,6 +63,7 @@ impl FromStr for CommandName {
 
 const DEFAULT_ARTIST_COUNT: usize = 5;
 const DEFAULT_SONG_COUNT: usize = 20;
+const DEFAULT_ALBUM_COUNT: usize = 10;
 const DEFAULT_MIN_LISTENS: u64 = 5;
 const DEFAULT_INPUT_FOLDER: &str = "./data/play_history";
 const DEFAULT_OUTPUT_FOLDER: &str = "./output";
@@ -86,6 +90,7 @@ impl CommandName {
             Self::MostSkipped => "Return the most skipped songs of all time".to_string(),
             Self::Export => "Export the current output to a file".to_string(),
             Self::Chart => "Create a chart of listens in a year by month".to_string(),
+            Self::TopAlbums => "Return the most listened to albums".to_string(),
         }
     }
 
@@ -107,6 +112,10 @@ impl CommandName {
                 count: DEFAULT_ARTIST_COUNT,
                 year: None,
                 month: None,
+            },
+            Self::TopAlbums => CommandParameters::TopAlbums {
+                count: DEFAULT_ALBUM_COUNT,
+                year: None,
             },
             Self::TopSongs => CommandParameters::TopSongs {
                 count: DEFAULT_SONG_COUNT,
@@ -180,6 +189,16 @@ impl CommandName {
                 CommandParameterSpec::Count {
                     description: format!(
                         "Number of songs to return (default: {DEFAULT_SONG_COUNT})"
+                    ),
+                },
+                CommandParameterSpec::Year {
+                    description: "Year to search in (optional, e.g 2022)".to_string(),
+                },
+            ],
+            CommandName::TopAlbums => vec![
+                CommandParameterSpec::Count {
+                    description: format!(
+                        "Number of albums to return (default: {DEFAULT_ALBUM_COUNT})"
                     ),
                 },
                 CommandParameterSpec::Year {

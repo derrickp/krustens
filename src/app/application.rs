@@ -307,6 +307,9 @@ impl Application {
             Some(CommandParameters::Chart { year, breakdown }) => {
                 self.run_chart(year, breakdown);
             }
+            Some(CommandParameters::TopAlbums { count, year }) => {
+                self.run_top_albums(count, year);
+            }
             None => {}
         }
     }
@@ -585,6 +588,42 @@ impl Application {
         self.state
             .output
             .insert(0, Output::MessageSet(MessageSet { title, messages }))
+    }
+
+    fn run_top_albums(&mut self, count: usize, year: Option<i32>) {
+        if let Some(y) = year {
+            let title = format!("Top albums (year: {y}, count: {count})");
+            if let Some(year_counts) = self.processor.year_count(y) {
+                let artist_album_counts = year_counts.artists_counts.top_albums(count);
+                let messages: Vec<String> = artist_album_counts
+                    .into_iter()
+                    .map(|count| format!("{count}"))
+                    .collect();
+                self.state
+                    .output
+                    .insert(0, Output::MessageSet(MessageSet { title, messages }))
+            } else {
+                self.state.output.insert(
+                    0,
+                    Output::MessageSet(MessageSet {
+                        title,
+                        messages: vec!["No artists found".to_string()],
+                    }),
+                );
+            }
+        } else {
+            let title = format!("Top albums (count: {count})");
+            let artist_counts = self.processor.artists_counts.top_albums(count);
+            let messages: Vec<String> = artist_counts
+                .into_iter()
+                .map(|count| format!("{count}"))
+                .collect();
+            self.state
+                .output
+                .insert(0, Output::MessageSet(MessageSet { title, messages }))
+        }
+
+        self.state.command_parameters = None;
     }
 
     fn run_top_songs(&mut self, count: usize, year: Option<i32>) {
