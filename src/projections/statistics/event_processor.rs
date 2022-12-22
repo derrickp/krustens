@@ -68,6 +68,10 @@ impl EventProcessor {
                         &listen.track_name,
                         listen.ms_played,
                     );
+
+                    if let Some(album_name) = &listen.album_name {
+                        year_counts.add_album_play(&date, &listen.artist_name, album_name);
+                    }
                 }
 
                 self.artists_counts.add_song_play(
@@ -75,6 +79,11 @@ impl EventProcessor {
                     &listen.track_name,
                     listen.ms_played,
                 );
+
+                if let Some(album_name) = &listen.album_name {
+                    self.artists_counts
+                        .add_album_play(&listen.artist_name, album_name);
+                }
             }
             EventData::TrackPlayIgnored(ignored) => {
                 self.artists_counts

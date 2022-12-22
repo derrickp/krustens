@@ -2,16 +2,18 @@ use std::{cmp::Reverse, collections::HashMap};
 
 use serde::Serialize;
 
-use crate::track_plays::{ArtistName, TrackName};
+use crate::track_plays::{AlbumName, ArtistName, TrackName};
 
 use super::{
-    counter::{ArtistSongCounter, SongCounter},
+    count::ArtistAndAlbumCount,
+    counter::{AlbumCounter, ArtistSongCounter, SongCounter},
     ArtistAndSongCount, General, TimePlayed,
 };
 
 #[derive(Clone, Default, Serialize)]
 pub struct ArtistsCounts {
     artist_song_counters: HashMap<ArtistName, SongCounter>,
+    artist_album_counters: HashMap<ArtistName, AlbumCounter>,
     time_played: TimePlayed,
     skipped_artists: HashMap<ArtistName, SongCounter>,
 }
@@ -59,6 +61,15 @@ impl ArtistsCounts {
             .entry(artist_name.clone())
             .or_insert_with(SongCounter::default);
         artist_counts.increment_song(song_name, 0);
+    }
+
+    pub fn add_album_play(&mut self, artist_name: &ArtistName, album_name: &AlbumName) {
+        let album_counter = self
+            .artist_album_counters
+            .entry(artist_name.clone())
+            .or_insert_with(AlbumCounter::default);
+
+        album_counter.increment_album(album_name);
     }
 
     pub fn add_song_play(
@@ -115,6 +126,26 @@ impl ArtistsCounts {
             })
             .collect();
         counts.sort_by_key(|play| Reverse(play.total_song_plays()));
+        counts.into_iter().take(count).collect()
+    }
+
+    pub fn top_albums(&self, count: usize) -> Vec<ArtistAndAlbumCount> {
+        let mut counts: Vec<ArtistAndAlbumCount> = self
+            .artist_album_counters
+            .clone()
+            .into_iter()
+            .flat_map(|(artist_name, play_count)| {
+                play_count
+                    .all_album_plays()
+                    .iter()
+                    .map(|album_count| ArtistAndAlbumCount {
+                        artist_name: artist_name.clone(),
+                        album_count: album_count.clone(),
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        counts.sort_by_key(|song_play_count| Reverse(song_play_count.album_count.1));
         counts.into_iter().take(count).collect()
     }
 

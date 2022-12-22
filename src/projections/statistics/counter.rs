@@ -1,8 +1,8 @@
 use serde::Serialize;
 
-use crate::track_plays::{ArtistName, TrackName};
+use crate::track_plays::{AlbumName, ArtistName, TrackName};
 
-use super::{SongCount, TimePlayed};
+use super::{count::AlbumCount, SongCount, TimePlayed};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct ArtistSongCounter {
@@ -29,6 +29,39 @@ impl ArtistSongCounter {
 
     pub fn max_song_play(&self) -> SongCount {
         self.play_details.max_song_play()
+    }
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct ArtistAlbumCounter {
+    pub artist_name: ArtistName,
+    pub play_details: AlbumCounter,
+}
+
+#[derive(Clone, Debug, Serialize, Default)]
+pub struct AlbumCounter {
+    total_plays: u64,
+    album_counts: Vec<AlbumCount>,
+}
+
+impl AlbumCounter {
+    pub fn increment_album(&mut self, album_name: &AlbumName) {
+        match self
+            .album_counts
+            .iter_mut()
+            .find(|album_count| album_count.0.eq_ignore_ascii_case(album_name))
+        {
+            Some(it) => it.1 += 1,
+            _ => {
+                let album_count = AlbumCount(album_name.clone(), 1);
+                self.album_counts.push(album_count);
+            }
+        }
+        self.total_plays += 1;
+    }
+
+    pub fn all_album_plays(&self) -> Vec<AlbumCount> {
+        self.album_counts.to_vec()
     }
 }
 
@@ -76,8 +109,8 @@ impl SongCounter {
     pub fn max_song_play(&self) -> SongCount {
         self.song_counts
             .iter()
-            .cloned()
             .max_by_key(|song_count| song_count.1)
+            .cloned()
             .unwrap_or_default()
     }
 }
