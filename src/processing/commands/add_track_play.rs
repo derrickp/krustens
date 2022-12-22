@@ -41,6 +41,7 @@ impl AddTrackPlay {
             Some(EventData::TrackPlayIgnored(TrackSkipped {
                 artist_name: listen.artist_name.clone(),
                 track_name: listen.track_name.clone(),
+                album_name: listen.album_name.clone(),
                 end_time: listen.formatted_end_time(),
                 ms_played: listen.play_time(),
                 service_hint: listen.service_hint.clone(),
@@ -49,6 +50,7 @@ impl AddTrackPlay {
             Some(EventData::TrackPlayAdded(TrackPlayAdded {
                 artist_name: listen.artist_name.clone(),
                 track_name: listen.track_name.clone(),
+                album_name: listen.album_name.clone(),
                 end_time: listen.formatted_end_time(),
                 ms_played: listen.play_time(),
                 service_hint: listen.service_hint.clone(),
