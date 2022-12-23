@@ -107,6 +107,12 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
                         KeyCode::Enter => {
                             app.command_name_entered();
                         }
+                        KeyCode::Up => {
+                            app.previous_command();
+                        }
+                        KeyCode::Down => {
+                            app.next_command();
+                        }
                         KeyCode::Char(c) => {
                             app.push_input_char(c);
                         }
