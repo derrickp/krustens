@@ -7,7 +7,7 @@ use crate::persistence::Format;
 
 use super::{chart::BarBreakdown, CommandParameterSpec, CommandParameters};
 
-#[derive(Deserialize, Serialize, EnumIter, PartialEq, Debug)]
+#[derive(Clone, Deserialize, Serialize, EnumIter, PartialEq, Debug)]
 pub enum CommandName {
     RandomArtists,
     TopArtists,
