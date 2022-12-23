@@ -60,6 +60,14 @@ impl Application {
         Ok(())
     }
 
+    pub fn previous_command(&mut self) {
+        self.state.input.set_from_previous_history();
+    }
+
+    pub fn next_command(&mut self) {
+        self.state.input.set_from_next_history();
+    }
+
     pub fn current_page_display(&self) -> usize {
         if self.state.output.is_empty() {
             0
@@ -73,20 +81,11 @@ impl Application {
     }
 
     pub fn go_to_next_page(&mut self) {
-        let next_page = self.state.current_page + 1;
-        if next_page >= self.state.output.len() {
-            self.state.current_page = 0;
-        } else {
-            self.state.current_page = next_page;
-        }
+        self.state.next_page();
     }
 
     pub fn go_to_previous_page(&mut self) {
-        if self.state.current_page == 0 {
-            return;
-        }
-
-        self.state.current_page -= 1;
+        self.state.previous_page();
     }
 
     pub fn push_input_char(&mut self, c: char) {
@@ -98,7 +97,7 @@ impl Application {
     }
 
     pub fn current_input(&self) -> &str {
-        &self.state.input
+        self.state.input.current()
     }
 
     pub fn mode(&self) -> &Mode {
@@ -128,11 +127,11 @@ impl Application {
 
     pub fn autocomplete_command_name(&mut self) {
         let names: Vec<CommandName> = CommandName::iter()
-            .filter(|name| name.to_string().starts_with(&self.state.input))
+            .filter(|name| name.to_string().starts_with(self.state.input.current()))
             .collect();
         if names.len() == 1 {
             let name = names.get(0).unwrap();
-            self.state.input = name.to_string();
+            self.state.input.set(name);
         }
     }
 
@@ -144,7 +143,7 @@ impl Application {
             Mode::Processing => {
                 self.run_command().await;
                 if self.state.command_parameters.is_none() {
-                    self.reset_state(false);
+                    self.state.reset(false);
                     self.state.mode = Mode::Normal;
                 }
             }
@@ -153,7 +152,7 @@ impl Application {
     }
 
     pub fn advance_command_input(&mut self) {
-        let text: String = self.state.input.drain(..).collect();
+        let text: String = self.state.input.drain();
         let spec = self.state.command_parameter_inputs.remove(0);
         match self.state.insert_command_parameter(&text, &spec) {
             Ok(_) => {
@@ -162,7 +161,7 @@ impl Application {
                 }
             }
             Err(e) => {
-                self.reset_state(true);
+                self.state.reset(true);
                 self.state.error_message = Some(e.to_string());
                 self.state.mode = Mode::Normal;
             }
@@ -170,14 +169,12 @@ impl Application {
     }
 
     pub fn command_name_entered(&mut self) {
-        let text: String = self.state.input.drain(..).collect();
+        let text: String = self.state.input.drain();
         match CommandName::from_str(&text) {
             Ok(it) => {
                 info!("{it:?}");
-                self.state.command_parameter_inputs = it.parameters();
-                self.state.command_parameters = Some(it.default_parameters());
-                self.state.command_name = Some(it);
-                self.state.mode = Mode::CommandParameters;
+                self.state.setup_for_command(&it);
+                self.state.input.push_to_history(it);
             }
             Err(_) => {
                 self.state.mode = Mode::Normal;
@@ -261,12 +258,12 @@ impl Application {
     }
 
     pub fn start_command_input(&mut self) {
-        self.reset_state(true);
+        self.state.reset(true);
         self.state.mode = Mode::EnterCommand;
     }
 
     pub fn cancel_command(&mut self) {
-        self.reset_state(true);
+        self.state.reset(true);
         self.state.mode = Mode::Normal;
     }
 
@@ -343,7 +340,7 @@ impl Application {
                 self.state.output.insert(0, Output::MessageSet(message_set));
             }
             Err(e) => {
-                self.reset_state(true);
+                self.state.reset(true);
                 self.state.error_message = Some(e.to_string());
             }
         }
@@ -865,15 +862,5 @@ impl Application {
                 messages: general.artist_most_played_songs.to_vec(),
             },
         ]
-    }
-
-    fn reset_state(&mut self, reset_error_message: bool) {
-        if reset_error_message {
-            self.state.error_message = None;
-        }
-        self.state.command_name = None;
-        self.state.command_parameters = None;
-        self.state.input.clear();
-        self.state.command_parameter_inputs.clear();
     }
 }

@@ -4,19 +4,17 @@ use strum::IntoEnumIterator;
 use crate::{errors::InteractiveError, persistence::Format};
 
 use super::{
-    chart::BarBreakdown, CommandName, CommandParameterSpec, CommandParameters, MessageSet, Mode,
-    Output,
+    chart::BarBreakdown, CommandName, CommandParameterSpec, CommandParameters, Input, MessageSet,
+    Mode, Output,
 };
 
 #[derive(Default)]
 pub struct State {
-    pub input: String,
+    pub input: Input,
     pub mode: Mode,
-    pub command_name: Option<CommandName>,
     pub error_message: Option<String>,
     pub command_parameter_inputs: Vec<CommandParameterSpec>,
     pub command_parameters: Option<CommandParameters>,
-    pub processing_messages: Vec<MessageSet>,
     pub current_page: usize,
     pub output: Vec<Output>,
 }
@@ -119,115 +117,94 @@ impl State {
     }
 
     fn add_bar_breakdown_parameter(&mut self, breakdown: BarBreakdown) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_bar_breakdown_parameter(breakdown));
         }
     }
 
     fn add_input_folder_parameter(&mut self, input_folder: &str) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_input_folder_parameter(input_folder));
         }
     }
 
     fn add_output_folder_parameter(&mut self, output_folder: &str) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_output_folder_parameter(output_folder));
         }
     }
 
     fn add_format_parameter(&mut self, format: Format) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_format_parameter(format));
         }
     }
 
     fn add_year_parameter(&mut self, year: i32) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_year_parameter(year));
         }
     }
 
     fn add_month_parameter(&mut self, month: u32) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_month_parameter(month));
         }
     }
 
     fn add_min_listens_parameter(&mut self, min_listens: u64) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_min_listens_parameter(min_listens));
         }
     }
 
     fn add_artist_count_parameter(&mut self, count: usize) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_count_parameter(count));
         }
     }
 
     fn add_date_parameter(&mut self, date: NaiveDate) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_date_parameter(date));
         }
     }
 
     fn add_name_parameter(&mut self, name: &str) {
-        if self.command_parameters.is_none() {
-            self.set_default_command_parameters();
-        }
-
         if let Some(parameters) = &self.command_parameters {
             self.command_parameters = Some(parameters.with_name_parameter(name));
         }
     }
 
-    fn set_default_command_parameters(&mut self) {
-        if self.command_parameters.is_some() {
-            return;
+    pub fn next_page(&mut self) {
+        let next_page = self.current_page + 1;
+        if next_page >= self.output.len() {
+            self.current_page = 0;
+        } else {
+            self.current_page = next_page;
         }
+    }
 
-        match &self.command_name {
-            Some(name) => {
-                self.command_parameters = Some(name.default_parameters());
-            }
-            None => {}
+    pub fn previous_page(&mut self) {
+        if self.current_page == 0 {
+            self.current_page = (self.output.len() - 1).max(0)
+        } else {
+            self.current_page -= 1;
         }
+    }
+
+    pub fn reset(&mut self, reset_error_message: bool) {
+        if reset_error_message {
+            self.error_message = None;
+        }
+        self.command_parameters = None;
+        self.input.clear();
+        self.command_parameter_inputs.clear();
+    }
+
+    pub fn setup_for_command(&mut self, command_name: &CommandName) {
+        self.command_parameter_inputs = command_name.parameters();
+        self.command_parameters = Some(command_name.default_parameters());
+        self.mode = Mode::CommandParameters;
     }
 }
