@@ -5,6 +5,12 @@ use serde::{de::Visitor, Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArtistName(pub String);
 
+impl ArtistName {
+    pub fn starts_with(&self, name: &str) -> bool {
+        self.0.to_ascii_lowercase().starts_with(name)
+    }
+}
+
 impl Display for ArtistName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
