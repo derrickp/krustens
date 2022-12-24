@@ -135,6 +135,22 @@ impl Application {
         }
     }
 
+    pub fn autocomplete_command_parameter(&mut self) {
+        if let Some(super::CommandParameterSpec::ArtistName { description: _ }) =
+            self.state.command_parameter_inputs.get(0)
+        {
+            let matches: Vec<&ArtistName> = self
+                .processor
+                .artist_names
+                .iter()
+                .filter(|artist_name| artist_name.starts_with(self.state.input.current()))
+                .collect();
+            if matches.len() == 1 {
+                self.state.input.set_text(&matches.get(0).unwrap().0);
+            }
+        }
+    }
+
     pub async fn tick(&mut self) -> Result<(), InteractiveError> {
         match self.state.mode {
             Mode::CommandParameters => {}

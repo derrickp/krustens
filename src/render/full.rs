@@ -131,6 +131,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
                         KeyCode::Enter => {
                             app.advance_command_input();
                         }
+                        KeyCode::Tab => {
+                            app.autocomplete_command_parameter();
+                        }
                         KeyCode::Char(c) => {
                             app.push_input_char(c);
                         }
