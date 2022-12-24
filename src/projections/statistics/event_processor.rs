@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{Datelike, NaiveDate};
 
@@ -17,6 +17,7 @@ use super::{
 pub struct EventProcessor {
     pub years: HashMap<i32, YearCounts>,
     pub artists_counts: ArtistsCounts,
+    pub artist_names: HashSet<ArtistName>,
 }
 
 impl EventProcessor {
@@ -84,6 +85,7 @@ impl EventProcessor {
                     self.artists_counts
                         .add_album_play(&listen.artist_name, album_name);
                 }
+                self.artist_names.insert(listen.artist_name.to_owned());
             }
             EventData::TrackPlayIgnored(ignored) => {
                 self.artists_counts
