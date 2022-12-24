@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::track_plays::{AlbumName, ArtistName, TrackName};
 
 use super::{count::AlbumCount, SongCount, TimePlayed};
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct ArtistSongCounter {
     pub artist_name: ArtistName,
     pub play_details: SongCounter,
@@ -32,13 +32,13 @@ impl ArtistSongCounter {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct ArtistAlbumCounter {
     pub artist_name: ArtistName,
     pub play_details: AlbumCounter,
 }
 
-#[derive(Clone, Debug, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct AlbumCounter {
     total_plays: u64,
     album_counts: Vec<AlbumCount>,
@@ -65,7 +65,7 @@ impl AlbumCounter {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct SongCounter {
     total_song_plays: u64,
     total_time_played: TimePlayed,

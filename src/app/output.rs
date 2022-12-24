@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use super::{BarChart, MessageSet};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Output {
     MessageSet(MessageSet),
     BarChart(BarChart),

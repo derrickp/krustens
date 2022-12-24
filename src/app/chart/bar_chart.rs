@@ -1,12 +1,14 @@
+use serde::{Deserialize, Serialize};
+
 use super::BarDataPoint;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BarChart {
     pub title: String,
     pub data_points: Vec<BarDataPoint>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum BarBreakdown {
     Month,
     Weekday,

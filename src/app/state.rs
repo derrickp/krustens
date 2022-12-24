@@ -1,4 +1,5 @@
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
 use crate::{errors::InteractiveError, persistence::Format};
@@ -8,7 +9,7 @@ use super::{
     Mode, Output,
 };
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct State {
     pub input: Input,
     pub mode: Mode,

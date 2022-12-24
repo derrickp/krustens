@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use chrono::{Datelike, NaiveDate, Weekday};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::track_plays::{AlbumName, ArtistName, TrackName};
 
 use super::{artists_counts::ArtistsCounts, counter::ArtistSongCounter};
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct YearCounts {
     pub year: i32,
     pub months: HashMap<u32, MonthCounts>,
@@ -77,7 +77,7 @@ impl YearCounts {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct MonthCounts {
     pub month: u32,
     pub days: HashMap<u32, DayCounts>,
@@ -153,7 +153,7 @@ impl MonthCounts {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct DayCounts {
     pub day_of_month: u32,
     pub weekday: Weekday,

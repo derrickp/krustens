@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Default, Debug, Serialize)]
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
 pub struct TimePlayed {
     pub time_ms: u64,
     pub time_sec: f64,

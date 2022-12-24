@@ -1,11 +1,13 @@
 use std::path::PathBuf;
 
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
 
 use crate::persistence::Format;
 
 use super::chart::BarBreakdown;
 
+#[derive(Deserialize, Serialize)]
 pub enum CommandParameterSpec {
     Year { description: String },
     Month { description: String },
@@ -36,7 +38,7 @@ impl CommandParameterSpec {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub enum CommandParameters {
     RandomArtists {
         year: Option<i32>,

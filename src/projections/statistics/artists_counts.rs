@@ -1,6 +1,6 @@
 use std::{cmp::Reverse, collections::HashMap};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::track_plays::{AlbumName, ArtistName, TrackName};
 
@@ -10,7 +10,7 @@ use super::{
     ArtistAndSongCount, General, TimePlayed,
 };
 
-#[derive(Clone, Default, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct ArtistsCounts {
     artist_song_counters: HashMap<ArtistName, SongCounter>,
     artist_album_counters: HashMap<ArtistName, AlbumCounter>,

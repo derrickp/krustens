@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use chrono::{Datelike, NaiveDate};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     processing::events::{Event, EventData},
@@ -13,7 +14,7 @@ use super::{
     MonthCounts,
 };
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct EventProcessor {
     pub years: HashMap<i32, YearCounts>,
     pub artists_counts: ArtistsCounts,
