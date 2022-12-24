@@ -29,6 +29,10 @@ impl Input {
         self.text = command_name.to_string();
     }
 
+    pub fn set_text(&mut self, text: &str) {
+        self.text = text.to_string();
+    }
+
     pub fn drain(&mut self) -> String {
         self.history_index = None;
         self.text.drain(..).collect()
