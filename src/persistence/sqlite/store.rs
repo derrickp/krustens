@@ -20,8 +20,7 @@ impl From<Pool<Sqlite>> for SqliteEventStore {
 #[async_trait]
 impl EventStore for SqliteEventStore {
     async fn stream_version(&self, stream: &str) -> u32 {
-        let query =
-            sqlx::query("select MAX(position) from streams where stream = $1").bind(&stream);
+        let query = sqlx::query("select MAX(position) from streams where stream = $1").bind(stream);
 
         let row: Option<u32> = match query
             .map(|row: SqliteRow| row.get(0))
@@ -57,7 +56,7 @@ impl EventStore for SqliteEventStore {
 
         let query = "insert into streams (stream, position, data) values ($1, $2, $3)";
         sqlx::query(query)
-            .bind(&stream)
+            .bind(stream)
             .bind(event.version)
             .bind(&data)
             .execute(&self.pool)
@@ -71,7 +70,7 @@ impl EventStore for SqliteEventStore {
         let query = "select data, position from streams where stream = $1";
 
         let result = sqlx::query(query)
-            .bind(&stream)
+            .bind(stream)
             .map(|row: SqliteRow| {
                 let data: String = row.try_get("data").unwrap();
                 let version = row.try_get("position").unwrap();
@@ -105,7 +104,7 @@ impl EventStore for SqliteEventStore {
         let query = "select data, position from streams where stream = $1 and position > $2";
 
         let result = sqlx::query(query)
-            .bind(&stream)
+            .bind(stream)
             .bind(version)
             .map(|row: SqliteRow| {
                 let data: String = row.try_get("data").unwrap();
