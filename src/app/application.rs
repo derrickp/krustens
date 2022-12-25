@@ -168,7 +168,11 @@ impl Application {
 
     pub async fn tick(&mut self) -> Result<(), InteractiveError> {
         match self.state.mode {
-            Mode::CommandParameters => {}
+            Mode::CommandParameters => {
+                if self.state.command_parameter_inputs.is_empty() {
+                    self.state.mode = Mode::Processing;
+                }
+            }
             Mode::EnterCommand => {}
             Mode::Normal => {}
             Mode::Processing => {
@@ -193,15 +197,11 @@ impl Application {
         Ok(())
     }
 
-    pub fn advance_command_input(&mut self) {
+    pub fn command_input_entered(&mut self) {
         let text: String = self.state.input.drain();
         let spec = self.state.command_parameter_inputs.remove(0);
         match self.state.insert_command_parameter(&text, &spec) {
-            Ok(_) => {
-                if self.state.command_parameter_inputs.is_empty() {
-                    self.state.mode = Mode::Processing;
-                }
-            }
+            Ok(_) => {}
             Err(e) => {
                 self.state.reset(true);
                 self.state.error_message = Some(e.to_string());
@@ -349,6 +349,9 @@ impl Application {
             Some(CommandParameters::TopAlbums { count, year }) => {
                 self.run_top_albums(count, year);
             }
+            Some(CommandParameters::ClearOutput) => {
+                self.run_clear_output();
+            }
             None => {}
         }
     }
@@ -383,6 +386,11 @@ impl Application {
                 self.state.error_message = Some(e.to_string());
             }
         }
+    }
+
+    fn run_clear_output(&mut self) {
+        self.state.clear_output();
+        self.state.command_parameters = None;
     }
 
     async fn run_process_listens(&mut self, mut files: Vec<PathBuf>) {

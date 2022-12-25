@@ -20,6 +20,7 @@ pub enum CommandName {
     MostSkipped,
     Export,
     Chart,
+    ClearOutput,
 }
 
 impl ToString for CommandName {
@@ -36,6 +37,7 @@ impl ToString for CommandName {
             Self::Export => "export".to_string(),
             Self::Chart => "chart".to_string(),
             Self::TopAlbums => "top albums".to_string(),
+            Self::ClearOutput => "clear output".to_string(),
         }
     }
 }
@@ -56,6 +58,7 @@ impl FromStr for CommandName {
             "export" => Ok(Self::Export),
             "chart" => Ok(Self::Chart),
             "top albums" => Ok(Self::TopAlbums),
+            "clear output" => Ok(Self::ClearOutput),
             _ => Err("Unknown text".to_string()),
         }
     }
@@ -70,27 +73,22 @@ const DEFAULT_OUTPUT_FOLDER: &str = "./output";
 const DEFAULT_FILE_FORMAT: Format = Format::Yaml;
 
 impl CommandName {
-    pub fn description(&self) -> String {
+    pub fn description(&self) -> &str {
         match *self {
-            Self::RandomArtists => {
-                "Select a number of random artists from some parameters".to_string()
-            }
-            Self::ArtistSongs => "List out the songs you've listened to from an artist".to_string(),
-            Self::ArtistsOnDay => {
-                "List all the songs you listened to on a specific day".to_string()
-            }
-            Self::Summarize => {
-                "Print out a summary of your listens, either for a year or all time".to_string()
-            }
+            Self::RandomArtists => "Select a number of random artists from some parameters",
+            Self::ArtistSongs => "List out the songs you've listened to from an artist",
+            Self::ArtistsOnDay => "List all the songs you listened to on a specific day",
+            Self::Summarize => "Print out a summary of your listens, either for a year or all time",
             Self::ProcessListens => {
-                "Process the listens in the data folder to fill the krustens database".to_string()
+                "Process the listens in the data folder to fill the krustens database"
             }
-            Self::TopArtists => "Return the most listened to artists".to_string(),
-            Self::TopSongs => "Return the most listened to songs".to_string(),
-            Self::MostSkipped => "Return the most skipped songs of all time".to_string(),
-            Self::Export => "Export the current output to a file".to_string(),
-            Self::Chart => "Create a chart of listens in a year by month".to_string(),
-            Self::TopAlbums => "Return the most listened to albums".to_string(),
+            Self::TopArtists => "Return the most listened to artists",
+            Self::TopSongs => "Return the most listened to songs",
+            Self::MostSkipped => "Return the most skipped songs of all time",
+            Self::Export => "Export the current output to a file",
+            Self::Chart => "Create a chart of listens in a year by month",
+            Self::TopAlbums => "Return the most listened to albums",
+            Self::ClearOutput => "Clear all of the output",
         }
     }
 
@@ -135,6 +133,7 @@ impl CommandName {
                     breakdown: BarBreakdown::default(),
                 }
             }
+            Self::ClearOutput => CommandParameters::ClearOutput,
         }
     }
 
@@ -230,7 +229,8 @@ impl CommandName {
                 CommandParameterSpec::BarBreakdown {
                     description: "How do you want to break down the data (weekday or month, defaults to month)".to_string()
                 }
-            ]
+            ],
+            CommandName::ClearOutput => Vec::new(),
         }
     }
 }

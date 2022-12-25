@@ -85,6 +85,7 @@ pub enum CommandParameters {
         year: i32,
         breakdown: BarBreakdown,
     },
+    ClearOutput,
 }
 
 impl CommandParameters {

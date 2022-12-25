@@ -130,7 +130,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
                     },
                     Mode::CommandParameters => match key.code {
                         KeyCode::Enter => {
-                            app.advance_command_input();
+                            app.command_input_entered();
                         }
                         KeyCode::Tab => {
                             app.autocomplete_command_parameter();

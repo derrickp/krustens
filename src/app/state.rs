@@ -22,6 +22,12 @@ pub struct State {
 }
 
 impl State {
+    pub fn clear_output(&mut self) {
+        self.is_dirty = true;
+        self.input.command_history.clear();
+        self.output.clear();
+    }
+
     pub fn reset_dirty(&mut self) {
         self.is_dirty = false;
     }
