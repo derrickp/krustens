@@ -253,8 +253,8 @@ impl Application {
         let text: Vec<String> = message_sets
             .iter()
             .flat_map(|message_set| {
-                let mut message_set_text: Vec<String> = vec![message_set.title.clone()];
-                message_set_text.append(&mut message_set.messages.to_vec());
+                let mut message_set_text: Vec<String> = vec![message_set.title().to_string()];
+                message_set_text.append(&mut message_set.messages().to_vec());
                 message_set_text
             })
             .collect();
@@ -346,10 +346,7 @@ impl Application {
                     None => vec![format!("Found {} possible files", paths.len())],
                 };
 
-                let message_set = MessageSet {
-                    title: "Process listens".to_string(),
-                    messages,
-                };
+                let message_set = MessageSet::with_messages("Process listens", messages);
                 let parameters = CommandParameters::ProcessListens { files: paths };
                 self.state.command_parameters = Some(parameters);
 
@@ -390,7 +387,7 @@ impl Application {
                 .iter_mut()
                 .find_map(|output| match output {
                     Output::MessageSet(set) => {
-                        if set.title.eq("Process listens") {
+                        if set.title().eq("Process listens") {
                             Some(set)
                         } else {
                             None
@@ -398,13 +395,9 @@ impl Application {
                     }
                     Output::BarChart(_) => None,
                 }) {
-                Some(it) => it.messages.append(&mut messages),
+                Some(it) => it.append_messages(&mut messages),
                 None => {
-                    let message_set = MessageSet {
-                        title: "Process listens".to_string(),
-                        messages,
-                    };
-
+                    let message_set = MessageSet::with_messages("Process listens", messages);
                     self.state.output.insert(0, Output::MessageSet(message_set));
                 }
             }
@@ -417,7 +410,7 @@ impl Application {
                 .iter_mut()
                 .find_map(|output| match output {
                     Output::MessageSet(set) => {
-                        if set.title.eq("Process listens") {
+                        if set.title().eq("Process listens") {
                             Some(set)
                         } else {
                             None
@@ -425,13 +418,12 @@ impl Application {
                     }
                     Output::BarChart(_) => None,
                 }) {
-                Some(it) => it.messages.push("Done processing".to_string()),
+                Some(it) => it.push_message("Done processing"),
                 None => {
-                    let message_set = MessageSet {
-                        title: "Process listens".to_string(),
-                        messages: vec!["Done processing".to_string()],
-                    };
-
+                    let message_set = MessageSet::with_messages(
+                        "Process listens",
+                        vec!["Done processing".to_string()],
+                    );
                     self.state.output.insert(0, Output::MessageSet(message_set));
                 }
             }
@@ -468,16 +460,16 @@ impl Application {
                 .collect();
             self.state.output.insert(
                 0,
-                Output::BarChart(super::BarChart {
-                    title: format!("Weekday Bar Chart {year}"),
+                Output::BarChart(super::BarChart::with_data_points(
+                    &format!("Weekday Bar Chart {year}"),
                     data_points,
-                }),
+                )),
             );
         } else {
-            let message_set = MessageSet {
-                title: format!("Monthly Bar Chart (year: {year})"),
-                messages: vec!["No data for year".to_string()],
-            };
+            let message_set = MessageSet::with_messages(
+                &format!("Monthly Bar Chart (year: {year})"),
+                vec!["No data for year".to_string()],
+            );
             self.state.output.insert(0, Output::MessageSet(message_set));
         }
     }
@@ -497,16 +489,16 @@ impl Application {
                 .collect();
             self.state.output.insert(
                 0,
-                Output::BarChart(super::BarChart {
-                    title: format!("Monthly Bar Chart {year}"),
+                Output::BarChart(super::BarChart::with_data_points(
+                    &format!("Monthly Bar Chart {year}"),
                     data_points,
-                }),
+                )),
             );
         } else {
-            let message_set = MessageSet {
-                title: format!("Monthly Bar Chart (year: {year})"),
-                messages: vec!["No data for year".to_string()],
-            };
+            let message_set = MessageSet::with_messages(
+                &format!("Monthly Bar Chart (year: {year})"),
+                vec!["No data for year".to_string()],
+            );
             self.state.output.insert(0, Output::MessageSet(message_set));
         }
     }
@@ -532,9 +524,10 @@ impl Application {
             .into_iter()
             .map(|counter| counter.total_plays_display())
             .collect();
-        self.state
-            .output
-            .insert(0, Output::MessageSet(MessageSet { title, messages }));
+        self.state.output.insert(
+            0,
+            Output::MessageSet(MessageSet::with_messages(&title, messages)),
+        );
     }
 
     fn top_artists_for_year_month(&mut self, artist_count: usize, year: i32, month: u32) {
@@ -546,25 +539,26 @@ impl Application {
                     .into_iter()
                     .map(|counter| counter.total_plays_display())
                     .collect();
-                self.state
-                    .output
-                    .insert(0, Output::MessageSet(MessageSet { title, messages }))
+                self.state.output.insert(
+                    0,
+                    Output::MessageSet(MessageSet::with_messages(&title, messages)),
+                )
             } else {
                 self.state.output.insert(
                     0,
-                    Output::MessageSet(MessageSet {
-                        title,
-                        messages: vec!["No artists found".to_string()],
-                    }),
+                    Output::MessageSet(MessageSet::with_messages(
+                        &title,
+                        vec!["No artists found".to_string()],
+                    )),
                 );
             }
         } else {
             self.state.output.insert(
                 0,
-                Output::MessageSet(MessageSet {
-                    title,
-                    messages: vec!["No artists found".to_string()],
-                }),
+                Output::MessageSet(MessageSet::with_messages(
+                    &title,
+                    vec!["No artists found".to_string()],
+                )),
             );
         }
     }
@@ -577,16 +571,17 @@ impl Application {
                 .into_iter()
                 .map(|counter| counter.total_plays_display())
                 .collect();
-            self.state
-                .output
-                .insert(0, Output::MessageSet(MessageSet { title, messages }))
+            self.state.output.insert(
+                0,
+                Output::MessageSet(MessageSet::with_messages(&title, messages)),
+            )
         } else {
             self.state.output.insert(
                 0,
-                Output::MessageSet(MessageSet {
-                    title,
-                    messages: vec!["No artists found".to_string()],
-                }),
+                Output::MessageSet(MessageSet::with_messages(
+                    &title,
+                    vec!["No artists found".to_string()],
+                )),
             );
         }
     }
@@ -598,9 +593,10 @@ impl Application {
             .into_iter()
             .map(|counter| counter.total_plays_display())
             .collect();
-        self.state
-            .output
-            .insert(0, Output::MessageSet(MessageSet { title, messages }))
+        self.state.output.insert(
+            0,
+            Output::MessageSet(MessageSet::with_messages(&title, messages)),
+        )
     }
 
     fn run_top_albums(&mut self, count: usize, year: Option<i32>) {
@@ -612,16 +608,17 @@ impl Application {
                     .into_iter()
                     .map(|count| format!("{count}"))
                     .collect();
-                self.state
-                    .output
-                    .insert(0, Output::MessageSet(MessageSet { title, messages }))
+                self.state.output.insert(
+                    0,
+                    Output::MessageSet(MessageSet::with_messages(&title, messages)),
+                )
             } else {
                 self.state.output.insert(
                     0,
-                    Output::MessageSet(MessageSet {
-                        title,
-                        messages: vec!["No artists found".to_string()],
-                    }),
+                    Output::MessageSet(MessageSet::with_messages(
+                        &title,
+                        vec!["No artists found".to_string()],
+                    )),
                 );
             }
         } else {
@@ -631,9 +628,10 @@ impl Application {
                 .into_iter()
                 .map(|count| format!("{count}"))
                 .collect();
-            self.state
-                .output
-                .insert(0, Output::MessageSet(MessageSet { title, messages }))
+            self.state.output.insert(
+                0,
+                Output::MessageSet(MessageSet::with_messages(&title, messages)),
+            )
         }
 
         self.state.command_parameters = None;
@@ -648,16 +646,17 @@ impl Application {
                     .into_iter()
                     .map(|count| format!("{count}"))
                     .collect();
-                self.state
-                    .output
-                    .insert(0, Output::MessageSet(MessageSet { title, messages }))
+                self.state.output.insert(
+                    0,
+                    Output::MessageSet(MessageSet::with_messages(&title, messages)),
+                )
             } else {
                 self.state.output.insert(
                     0,
-                    Output::MessageSet(MessageSet {
-                        title,
-                        messages: vec!["No artists found".to_string()],
-                    }),
+                    Output::MessageSet(MessageSet::with_messages(
+                        &title,
+                        vec!["No artists found".to_string()],
+                    )),
                 );
             }
         } else {
@@ -667,9 +666,10 @@ impl Application {
                 .into_iter()
                 .map(|count| format!("{count}"))
                 .collect();
-            self.state
-                .output
-                .insert(0, Output::MessageSet(MessageSet { title, messages }))
+            self.state.output.insert(
+                0,
+                Output::MessageSet(MessageSet::with_messages(&title, messages)),
+            )
         }
 
         self.state.command_parameters = None;
@@ -682,9 +682,10 @@ impl Application {
             .iter()
             .map(|song_count| format!("{song_count}"))
             .collect();
-        self.state
-            .output
-            .insert(0, Output::MessageSet(MessageSet { title, messages }));
+        self.state.output.insert(
+            0,
+            Output::MessageSet(MessageSet::with_messages(&title, messages)),
+        );
 
         self.state.command_parameters = None;
     }
@@ -740,9 +741,10 @@ impl Application {
             artist_names.iter().take(artist_count).cloned().collect()
         };
 
-        self.state
-            .output
-            .insert(0, Output::MessageSet(MessageSet { title, messages }));
+        self.state.output.insert(
+            0,
+            Output::MessageSet(MessageSet::with_messages(&title, messages)),
+        );
 
         self.state.command_parameters = None;
     }
@@ -766,10 +768,10 @@ impl Application {
 
         self.state.output.insert(
             0,
-            Output::MessageSet(MessageSet {
-                title: format!("Songs for {name}"),
-                messages: songs,
-            }),
+            Output::MessageSet(MessageSet::with_messages(
+                &format!("Songs for {name}"),
+                songs,
+            )),
         );
 
         self.state.command_parameters = None;
@@ -791,9 +793,10 @@ impl Application {
             names
         };
 
-        self.state
-            .output
-            .insert(0, Output::MessageSet(MessageSet { title, messages }));
+        self.state.output.insert(
+            0,
+            Output::MessageSet(MessageSet::with_messages(&title, messages)),
+        );
 
         self.state.command_parameters = None;
     }
@@ -803,10 +806,10 @@ impl Application {
             if let Some(year_counts) = self.processor.year_count(y) {
                 self.summarize_to_message_sets(&year, &year_counts.artists_counts)
             } else {
-                vec![MessageSet {
-                    title: format!("Statistics for {y}"),
-                    messages: vec!["No statistics gathered".to_string()],
-                }]
+                vec![MessageSet::with_messages(
+                    &format!("Statistics for {y}"),
+                    vec!["No statistics gathered".to_string()],
+                )]
             }
         } else {
             self.summarize_to_message_sets(&year, &self.processor.artists_counts)
@@ -855,28 +858,25 @@ impl Application {
             .unwrap_or_else(|| "Most listened songs (unique artist, year: None)".to_string());
 
         vec![
-            MessageSet {
-                title: general_stats_title,
-                messages: vec![
+            MessageSet::with_messages(
+                &general_stats_title,
+                vec![
                     format!(
                         "You've listened to {} artists",
                         general.count_artists_listened_to
                     ),
                     total_played_message,
                 ],
-            },
-            MessageSet {
-                title: most_listened_title,
-                messages: general.artist_total_plays.to_vec(),
-            },
-            MessageSet {
-                title: most_listened_songs_title,
-                messages: general.most_played_songs.to_vec(),
-            },
-            MessageSet {
-                title: most_listened_songs_unique_artist_title,
-                messages: general.artist_most_played_songs.to_vec(),
-            },
+            ),
+            MessageSet::with_messages(&most_listened_title, general.artist_total_plays.to_vec()),
+            MessageSet::with_messages(
+                &most_listened_songs_title,
+                general.most_played_songs.to_vec(),
+            ),
+            MessageSet::with_messages(
+                &most_listened_songs_unique_artist_title,
+                general.artist_most_played_songs.to_vec(),
+            ),
         ]
     }
 }

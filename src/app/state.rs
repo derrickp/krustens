@@ -26,10 +26,7 @@ impl State {
             .map(|command| format!("{} - {}", command.to_string(), command.description()))
             .collect();
         messages.sort();
-        MessageSet {
-            title: "Commands".to_string(),
-            messages,
-        }
+        MessageSet::with_messages("Commands", messages)
     }
 
     pub fn insert_command_parameter(

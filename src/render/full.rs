@@ -275,7 +275,7 @@ fn render_message_set<B: Backend>(
 
     let include_number = !matches!(mode, Mode::EnterCommand);
 
-    for (i, m) in message_set.messages.iter().enumerate() {
+    for (i, m) in message_set.messages().iter().enumerate() {
         let message = if include_number {
             format!("{i}: {m}")
         } else {
@@ -291,7 +291,7 @@ fn render_message_set<B: Backend>(
         Mode::Normal | Mode::Processing => {
             format!(
                 "{} page {current_page} of {total_pages} overflow not shown, copy or export to see",
-                message_set.title
+                message_set.title()
             )
         }
     };
@@ -335,13 +335,13 @@ fn render_chart<B: Backend>(
     total_pages: usize,
 ) {
     let data: Vec<(&str, u64)> = bar_chart_data
-        .data_points
+        .data_points()
         .iter()
         .map(|data_point| (data_point.x(), data_point.y()))
         .collect();
     let title = format!(
         "{} page {current_page} of {total_pages}",
-        bar_chart_data.title
+        bar_chart_data.title()
     );
     let bar_chart = BarChart::default()
         .block(Block::default().title(title).borders(Borders::ALL))
