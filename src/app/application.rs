@@ -29,7 +29,7 @@ use super::{
 };
 
 pub struct Application {
-    store: Arc<dyn EventStore>,
+    store: Arc<Mutex<dyn EventStore>>,
     repository: Arc<Mutex<dyn ListenTrackerRepository>>,
     pub processor: EventProcessor,
     pub state: State,
@@ -37,7 +37,7 @@ pub struct Application {
 
 impl Application {
     pub fn new(
-        store: Arc<dyn EventStore>,
+        store: Arc<Mutex<dyn EventStore>>,
         repository: Arc<Mutex<dyn ListenTrackerRepository>>,
     ) -> Application {
         Application {
@@ -49,8 +49,8 @@ impl Application {
     }
 
     pub async fn initialize(&mut self) -> Result<(), InteractiveError> {
-        let event_stream = self
-            .store
+        let event_store = self.store.lock().await;
+        let event_stream = event_store
             .get_events("listens".to_string())
             .await
             .map_err(|e| InteractiveError::GetEventsError { error: e })?;

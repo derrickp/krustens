@@ -25,7 +25,7 @@ use crate::{
 use unicode_width::UnicodeWidthStr;
 
 pub async fn full_ui(
-    store: Arc<dyn EventStore>,
+    store: Arc<Mutex<dyn EventStore>>,
     repository: Arc<Mutex<dyn ListenTrackerRepository>>,
 ) -> Result<(), InteractiveError> {
     let mut app = Application::new(store, repository);

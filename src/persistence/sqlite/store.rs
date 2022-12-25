@@ -39,7 +39,7 @@ impl EventStore for SqliteEventStore {
     }
 
     async fn add_event(
-        &self,
+        &mut self,
         stream: String,
         event: Event,
         expected_version: u32,

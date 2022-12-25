@@ -13,7 +13,7 @@ pub const MIN_LISTEN_LENGTH: u64 = 1000 * 10;
 
 pub async fn process_file(
     path: &PathBuf,
-    store: &Arc<dyn EventStore>,
+    store: &Arc<Mutex<dyn EventStore>>,
     repository: &Arc<Mutex<dyn ListenTrackerRepository>>,
 ) -> Result<Vec<Event>, ReadError> {
     let track_plays = read_track_plays(path)?;
@@ -32,7 +32,11 @@ pub async fn process_file(
         let listen_event = match handle_result {
             Some(event) => {
                 let version = event.version;
-                match store.add_event("listens".to_string(), event, version).await {
+                let mut event_store = store.lock().await;
+                match event_store
+                    .add_event("listens".to_string(), event, version)
+                    .await
+                {
                     Ok(it) => it,
                     Err(_) => continue,
                 }

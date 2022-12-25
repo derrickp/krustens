@@ -1,4 +1,5 @@
 use sqlx::{Pool, Sqlite};
+use tokio::sync::Mutex;
 
 use crate::{
     processing::events::{Event, EventData},
@@ -112,7 +113,7 @@ impl SqliteListenTrackerRepository {
 pub async fn listen_tracker_repo(
     buffer_count: usize,
     pool: &Pool<Sqlite>,
-    store: Arc<dyn EventStore + Send + Sync>,
+    store: Arc<Mutex<dyn EventStore + Send + Sync>>,
 ) -> SqliteListenTrackerRepository {
     let listen_tracker = SqliteListenTrackerRepository::read(pool).await.unwrap();
     let current_version = listen_tracker.version;
@@ -124,13 +125,14 @@ pub async fn listen_tracker_repo(
         not_persisted_count: 0,
     };
 
-    let store_version = store.stream_version("listens".to_string()).await;
+    let event_store = store.lock().await;
+    let store_version = event_store.stream_version("listens".to_string()).await;
 
     if current_version == store_version {
         return repository;
     }
 
-    let event_stream = store
+    let event_stream = event_store
         .get_events_after("listens".to_string(), current_version)
         .await
         .unwrap();

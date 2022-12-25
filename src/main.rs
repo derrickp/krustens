@@ -29,7 +29,7 @@ async fn main() -> Result<(), std::io::Error> {
     let db_config = DatabaseConfig::from(database_url);
     let pool = persistence::sqlite::build_pool_and_migrate(db_config).await;
 
-    let store = Arc::new(SqliteEventStore::from(pool.clone()));
+    let store = Arc::new(Mutex::new(SqliteEventStore::from(pool.clone())));
     let repository = Arc::new(Mutex::new(
         listen_tracker_repo(20_000, &pool, store.clone()).await,
     ));

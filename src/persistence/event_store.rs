@@ -9,7 +9,7 @@ use crate::{
 pub trait EventStore {
     async fn stream_version(&self, stream: String) -> u32;
     async fn add_event(
-        &self,
+        &mut self,
         stream: String,
         event: Event,
         expected_version: u32,
