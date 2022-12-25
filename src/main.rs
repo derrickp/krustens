@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use logging::setup_logging;
 use persistence::{
-    sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore},
+    sqlite::{listen_tracker_repo, DatabaseConfig, SqliteEventStore, SqliteStateStore},
     OutputFolder,
 };
 use tokio::sync::Mutex;
@@ -33,6 +33,9 @@ async fn main() -> Result<(), std::io::Error> {
     let repository = Arc::new(Mutex::new(
         listen_tracker_repo(20_000, &pool, store.clone()).await,
     ));
-    render::full_ui(store, repository).await.unwrap();
+    let state_store = Arc::new(Mutex::new(SqliteStateStore::from(pool.clone())));
+    render::full_ui(store, state_store, repository)
+        .await
+        .unwrap();
     Ok(())
 }

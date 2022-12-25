@@ -17,10 +17,33 @@ pub struct State {
     pub command_parameter_inputs: Vec<CommandParameterSpec>,
     pub command_parameters: Option<CommandParameters>,
     pub current_page: usize,
-    pub output: Vec<Output>,
+    output: Vec<Output>,
+    is_dirty: bool,
 }
 
 impl State {
+    pub fn reset_dirty(&mut self) {
+        self.is_dirty = false;
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.is_dirty
+    }
+
+    pub fn insert_output(&mut self, index: usize, output: Output) {
+        self.is_dirty = true;
+        self.output.insert(index, output);
+    }
+
+    pub fn output(&self) -> &Vec<Output> {
+        &self.output
+    }
+
+    pub fn output_mut(&mut self) -> Vec<&mut Output> {
+        self.is_dirty = true;
+        self.output.iter_mut().collect()
+    }
+
     pub fn command_message_set(&self) -> MessageSet {
         let mut messages: Vec<String> = CommandName::iter()
             .map(|command| format!("{} - {}", command.to_string(), command.description()))
@@ -34,6 +57,7 @@ impl State {
         text: &str,
         spec: &CommandParameterSpec,
     ) -> Result<(), InteractiveError> {
+        self.is_dirty = true;
         match spec {
             CommandParameterSpec::Year { description: _ } => {
                 if let Ok(year) = text.parse::<i32>() {

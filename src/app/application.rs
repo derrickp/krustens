@@ -8,13 +8,13 @@ use std::{
 
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate, Weekday};
-use log::info;
+use log::{error, info};
 use strum::IntoEnumIterator;
 use tokio::sync::Mutex;
 
 use crate::{
     errors::InteractiveError,
-    persistence::{fs::FileWriter, EventStore, Format, OutputFolder, Writer},
+    persistence::{fs::FileWriter, EventStore, Format, OutputFolder, StateStore, Writer},
     processing,
     projections::{
         statistics::{order_in_week, ArtistsCounts, EventProcessor, MonthCounts},
@@ -31,6 +31,7 @@ use super::{
 pub struct Application {
     store: Arc<Mutex<dyn EventStore>>,
     repository: Arc<Mutex<dyn ListenTrackerRepository>>,
+    state_store: Arc<Mutex<dyn StateStore>>,
     pub processor: EventProcessor,
     pub state: State,
 }
@@ -39,10 +40,12 @@ impl Application {
     pub fn new(
         store: Arc<Mutex<dyn EventStore>>,
         repository: Arc<Mutex<dyn ListenTrackerRepository>>,
+        state_store: Arc<Mutex<dyn StateStore>>,
     ) -> Application {
         Application {
             store,
             repository,
+            state_store,
             processor: EventProcessor::default(),
             state: State::default(),
         }
@@ -57,6 +60,18 @@ impl Application {
         for event in event_stream.events.iter() {
             self.processor.process_event(event);
         }
+
+        let state_store = self.state_store.lock().await;
+        let state = match state_store.get().await {
+            Ok(it) => it,
+            Err(e) => {
+                error!("{e}");
+
+                State::default()
+            }
+        };
+        self.state = state;
+
         Ok(())
     }
 
@@ -69,7 +84,7 @@ impl Application {
     }
 
     pub fn current_page_display(&self) -> usize {
-        if self.state.output.is_empty() {
+        if self.state.output().is_empty() {
             0
         } else {
             self.state.current_page + 1
@@ -77,7 +92,7 @@ impl Application {
     }
 
     pub fn num_pages(&self) -> usize {
-        self.state.output.len()
+        self.state.output().len()
     }
 
     pub fn go_to_next_page(&mut self) {
@@ -120,7 +135,7 @@ impl Application {
             Mode::CommandParameters => None,
             Mode::EnterCommand => Some(Output::MessageSet(self.state.command_message_set())),
             Mode::Processing | Mode::Normal => {
-                self.state.output.get(self.state.current_page).cloned()
+                self.state.output().get(self.state.current_page).cloned()
             }
         }
     }
@@ -164,6 +179,17 @@ impl Application {
                 }
             }
         }
+
+        if self.state.is_dirty() {
+            let mut state_store = self.state_store.lock().await;
+            match state_store.push(&self.state).await {
+                Ok(_) => self.state.reset_dirty(),
+                Err(e) => {
+                    error!("{e}");
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -201,7 +227,7 @@ impl Application {
 
     fn message_sets(&self) -> Vec<&MessageSet> {
         self.state
-            .output
+            .output()
             .iter()
             .filter_map(|output| match output {
                 super::Output::MessageSet(message_set) => Some(message_set),
@@ -221,7 +247,7 @@ impl Application {
         let today = Local::now().format("%Y-%m-%d %H:%M:%S");
         let message_sets: Vec<MessageSet> = self
             .state
-            .output
+            .output()
             .iter()
             .filter_map(|output| match output {
                 super::Output::MessageSet(message_set) => Some(message_set.clone()),
@@ -350,7 +376,7 @@ impl Application {
                 let parameters = CommandParameters::ProcessListens { files: paths };
                 self.state.command_parameters = Some(parameters);
 
-                self.state.output.insert(0, Output::MessageSet(message_set));
+                self.state.insert_output(0, Output::MessageSet(message_set));
             }
             Err(e) => {
                 self.state.reset(true);
@@ -383,7 +409,7 @@ impl Application {
 
             match self
                 .state
-                .output
+                .output_mut()
                 .iter_mut()
                 .find_map(|output| match output {
                     Output::MessageSet(set) => {
@@ -398,7 +424,7 @@ impl Application {
                 Some(it) => it.append_messages(&mut messages),
                 None => {
                     let message_set = MessageSet::with_messages("Process listens", messages);
-                    self.state.output.insert(0, Output::MessageSet(message_set));
+                    self.state.insert_output(0, Output::MessageSet(message_set));
                 }
             }
 
@@ -406,7 +432,7 @@ impl Application {
         } else {
             match self
                 .state
-                .output
+                .output_mut()
                 .iter_mut()
                 .find_map(|output| match output {
                     Output::MessageSet(set) => {
@@ -424,7 +450,7 @@ impl Application {
                         "Process listens",
                         vec!["Done processing".to_string()],
                     );
-                    self.state.output.insert(0, Output::MessageSet(message_set));
+                    self.state.insert_output(0, Output::MessageSet(message_set));
                 }
             }
             self.state.command_parameters = None;
@@ -458,7 +484,7 @@ impl Application {
                 .into_iter()
                 .map(|(weekday, count)| BarDataPoint::new(weekday.to_string(), count))
                 .collect();
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::BarChart(super::BarChart::with_data_points(
                     &format!("Weekday Bar Chart {year}"),
@@ -470,7 +496,7 @@ impl Application {
                 &format!("Monthly Bar Chart (year: {year})"),
                 vec!["No data for year".to_string()],
             );
-            self.state.output.insert(0, Output::MessageSet(message_set));
+            self.state.insert_output(0, Output::MessageSet(message_set));
         }
     }
 
@@ -487,7 +513,7 @@ impl Application {
                     )
                 })
                 .collect();
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::BarChart(super::BarChart::with_data_points(
                     &format!("Monthly Bar Chart {year}"),
@@ -499,7 +525,7 @@ impl Application {
                 &format!("Monthly Bar Chart (year: {year})"),
                 vec!["No data for year".to_string()],
             );
-            self.state.output.insert(0, Output::MessageSet(message_set));
+            self.state.insert_output(0, Output::MessageSet(message_set));
         }
     }
 
@@ -524,7 +550,7 @@ impl Application {
             .into_iter()
             .map(|counter| counter.total_plays_display())
             .collect();
-        self.state.output.insert(
+        self.state.insert_output(
             0,
             Output::MessageSet(MessageSet::with_messages(&title, messages)),
         );
@@ -539,12 +565,12 @@ impl Application {
                     .into_iter()
                     .map(|counter| counter.total_plays_display())
                     .collect();
-                self.state.output.insert(
+                self.state.insert_output(
                     0,
                     Output::MessageSet(MessageSet::with_messages(&title, messages)),
                 )
             } else {
-                self.state.output.insert(
+                self.state.insert_output(
                     0,
                     Output::MessageSet(MessageSet::with_messages(
                         &title,
@@ -553,7 +579,7 @@ impl Application {
                 );
             }
         } else {
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::MessageSet(MessageSet::with_messages(
                     &title,
@@ -571,12 +597,12 @@ impl Application {
                 .into_iter()
                 .map(|counter| counter.total_plays_display())
                 .collect();
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::MessageSet(MessageSet::with_messages(&title, messages)),
             )
         } else {
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::MessageSet(MessageSet::with_messages(
                     &title,
@@ -593,7 +619,7 @@ impl Application {
             .into_iter()
             .map(|counter| counter.total_plays_display())
             .collect();
-        self.state.output.insert(
+        self.state.insert_output(
             0,
             Output::MessageSet(MessageSet::with_messages(&title, messages)),
         )
@@ -608,12 +634,12 @@ impl Application {
                     .into_iter()
                     .map(|count| format!("{count}"))
                     .collect();
-                self.state.output.insert(
+                self.state.insert_output(
                     0,
                     Output::MessageSet(MessageSet::with_messages(&title, messages)),
                 )
             } else {
-                self.state.output.insert(
+                self.state.insert_output(
                     0,
                     Output::MessageSet(MessageSet::with_messages(
                         &title,
@@ -628,7 +654,7 @@ impl Application {
                 .into_iter()
                 .map(|count| format!("{count}"))
                 .collect();
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::MessageSet(MessageSet::with_messages(&title, messages)),
             )
@@ -646,12 +672,12 @@ impl Application {
                     .into_iter()
                     .map(|count| format!("{count}"))
                     .collect();
-                self.state.output.insert(
+                self.state.insert_output(
                     0,
                     Output::MessageSet(MessageSet::with_messages(&title, messages)),
                 )
             } else {
-                self.state.output.insert(
+                self.state.insert_output(
                     0,
                     Output::MessageSet(MessageSet::with_messages(
                         &title,
@@ -666,7 +692,7 @@ impl Application {
                 .into_iter()
                 .map(|count| format!("{count}"))
                 .collect();
-            self.state.output.insert(
+            self.state.insert_output(
                 0,
                 Output::MessageSet(MessageSet::with_messages(&title, messages)),
             )
@@ -682,7 +708,7 @@ impl Application {
             .iter()
             .map(|song_count| format!("{song_count}"))
             .collect();
-        self.state.output.insert(
+        self.state.insert_output(
             0,
             Output::MessageSet(MessageSet::with_messages(&title, messages)),
         );
@@ -741,7 +767,7 @@ impl Application {
             artist_names.iter().take(artist_count).cloned().collect()
         };
 
-        self.state.output.insert(
+        self.state.insert_output(
             0,
             Output::MessageSet(MessageSet::with_messages(&title, messages)),
         );
@@ -766,7 +792,7 @@ impl Application {
         songs.sort();
         songs.dedup();
 
-        self.state.output.insert(
+        self.state.insert_output(
             0,
             Output::MessageSet(MessageSet::with_messages(
                 &format!("Songs for {name}"),
@@ -793,7 +819,7 @@ impl Application {
             names
         };
 
-        self.state.output.insert(
+        self.state.insert_output(
             0,
             Output::MessageSet(MessageSet::with_messages(&title, messages)),
         );
@@ -818,7 +844,7 @@ impl Application {
         message_sets.reverse();
 
         for message_set in message_sets.into_iter() {
-            self.state.output.insert(0, Output::MessageSet(message_set));
+            self.state.insert_output(0, Output::MessageSet(message_set));
         }
 
         self.state.command_parameters = None;

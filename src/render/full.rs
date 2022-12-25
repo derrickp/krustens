@@ -18,7 +18,7 @@ use tui::{
 use crate::{
     app::{Application, MessageSet, Mode, Output},
     errors::InteractiveError,
-    persistence::EventStore,
+    persistence::{EventStore, StateStore},
     projections::ListenTrackerRepository,
 };
 
@@ -26,9 +26,10 @@ use unicode_width::UnicodeWidthStr;
 
 pub async fn full_ui(
     store: Arc<Mutex<dyn EventStore>>,
+    state_store: Arc<Mutex<dyn StateStore>>,
     repository: Arc<Mutex<dyn ListenTrackerRepository>>,
 ) -> Result<(), InteractiveError> {
-    let mut app = Application::new(store, repository);
+    let mut app = Application::new(store, repository, state_store);
     app.initialize().await?;
 
     println!("Loading...");
