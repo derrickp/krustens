@@ -51,7 +51,7 @@ impl Application {
     pub async fn initialize(&mut self) -> Result<(), InteractiveError> {
         let event_store = self.store.lock().await;
         let event_stream = event_store
-            .get_events("listens".to_string())
+            .get_events("listens")
             .await
             .map_err(|e| InteractiveError::GetEventsError { error: e })?;
         for event in event_stream.events.iter() {

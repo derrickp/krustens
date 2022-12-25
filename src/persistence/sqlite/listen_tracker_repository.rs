@@ -126,14 +126,14 @@ pub async fn listen_tracker_repo(
     };
 
     let event_store = store.lock().await;
-    let store_version = event_store.stream_version("listens".to_string()).await;
+    let store_version = event_store.stream_version("listens").await;
 
     if current_version == store_version {
         return repository;
     }
 
     let event_stream = event_store
-        .get_events_after("listens".to_string(), current_version)
+        .get_events_after("listens", current_version)
         .await
         .unwrap();
 

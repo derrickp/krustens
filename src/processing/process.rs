@@ -33,10 +33,7 @@ pub async fn process_file(
             Some(event) => {
                 let version = event.version;
                 let mut event_store = store.lock().await;
-                match event_store
-                    .add_event("listens".to_string(), event, version)
-                    .await
-                {
+                match event_store.add_event("listens", event, version).await {
                     Ok(it) => it,
                     Err(_) => continue,
                 }

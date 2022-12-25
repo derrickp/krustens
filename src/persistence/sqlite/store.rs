@@ -19,7 +19,7 @@ impl From<Pool<Sqlite>> for SqliteEventStore {
 
 #[async_trait]
 impl EventStore for SqliteEventStore {
-    async fn stream_version(&self, stream: String) -> u32 {
+    async fn stream_version(&self, stream: &str) -> u32 {
         let query =
             sqlx::query("select MAX(position) from streams where stream = $1").bind(&stream);
 
@@ -40,11 +40,11 @@ impl EventStore for SqliteEventStore {
 
     async fn add_event(
         &mut self,
-        stream: String,
+        stream: &str,
         event: Event,
         expected_version: u32,
     ) -> Result<Event, AddEventError> {
-        let current_version = self.stream_version(stream.clone()).await;
+        let current_version = self.stream_version(stream).await;
 
         if expected_version <= current_version {
             return Err(AddEventError::VersionOutOfDate {
@@ -67,7 +67,7 @@ impl EventStore for SqliteEventStore {
         Ok(event)
     }
 
-    async fn get_events(&self, stream: String) -> Result<EventStream, GetEventsError> {
+    async fn get_events(&self, stream: &str) -> Result<EventStream, GetEventsError> {
         let query = "select data, position from streams where stream = $1";
 
         let result = sqlx::query(query)
@@ -99,7 +99,7 @@ impl EventStore for SqliteEventStore {
 
     async fn get_events_after(
         &self,
-        stream: String,
+        stream: &str,
         version: u32,
     ) -> Result<EventStream, GetEventsError> {
         let query = "select data, position from streams where stream = $1 and position > $2";
