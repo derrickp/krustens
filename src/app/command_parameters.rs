@@ -82,7 +82,7 @@ pub enum CommandParameters {
         format: Format,
     },
     Chart {
-        year: i32,
+        year: Option<i32>,
         breakdown: BarBreakdown,
     },
     ClearOutput,
@@ -156,7 +156,7 @@ impl CommandParameters {
             },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
             Self::Chart { year: _, breakdown } => Self::Chart {
-                year,
+                year: Some(year),
                 breakdown: breakdown.to_owned(),
             },
             _ => self.to_owned(),

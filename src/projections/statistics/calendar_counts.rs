@@ -95,7 +95,7 @@ impl From<&NaiveDate> for MonthCounts {
 }
 
 impl MonthCounts {
-    pub fn merge(month_counts: Vec<MonthCounts>) -> ArtistsCounts {
+    pub fn merge_to_counts(month_counts: Vec<MonthCounts>) -> ArtistsCounts {
         let mut starting_counts = ArtistsCounts::default();
 
         for month_count in month_counts.iter() {
@@ -103,6 +103,31 @@ impl MonthCounts {
         }
 
         starting_counts
+    }
+
+    pub fn merge(month_counts: Vec<&MonthCounts>) -> Vec<MonthCounts> {
+        let mut starter: HashMap<u32, MonthCounts> = HashMap::new();
+
+        for month_count in month_counts {
+            starter
+                .entry(month_count.month)
+                .and_modify(|entry| {
+                    entry.artists_counts.add(&month_count.artists_counts);
+
+                    for day_count in month_count.day_counts() {
+                        entry
+                            .days
+                            .entry(day_count.day_of_month)
+                            .and_modify(|day_entry| {
+                                day_entry.artists_counts.add(&day_count.artists_counts);
+                            })
+                            .or_insert_with(|| day_count.clone());
+                    }
+                })
+                .or_insert_with(|| month_count.clone());
+        }
+
+        starter.into_iter().map(|e| e.1).collect()
     }
 
     pub fn day_counts(&self) -> Vec<&DayCounts> {

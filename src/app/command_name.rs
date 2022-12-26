@@ -1,4 +1,3 @@
-use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum_macros::EnumIter;
@@ -126,13 +125,10 @@ impl CommandName {
                 output_folder: DEFAULT_OUTPUT_FOLDER.to_string(),
                 format: DEFAULT_FILE_FORMAT,
             },
-            Self::Chart => {
-                let default_year = chrono::Utc::now().year();
-                CommandParameters::Chart {
-                    year: default_year,
-                    breakdown: BarBreakdown::default(),
-                }
-            }
+            Self::Chart => CommandParameters::Chart {
+                year: None,
+                breakdown: BarBreakdown::default(),
+            },
             Self::ClearOutput => CommandParameters::ClearOutput,
         }
     }
@@ -224,7 +220,7 @@ impl CommandName {
             ],
             CommandName::Chart => vec![
                 CommandParameterSpec::Year {
-                    description: "What year for the chart (defaults to current year)".to_string()
+                    description: "What year for the chart (e.g. 2022)".to_string()
                 },
                 CommandParameterSpec::BarBreakdown {
                     description: "How do you want to break down the data (weekday or month, defaults to month)".to_string()
