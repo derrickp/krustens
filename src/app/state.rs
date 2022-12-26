@@ -25,6 +25,7 @@ impl State {
     pub fn clear_output(&mut self) {
         self.is_dirty = true;
         self.input.command_history.clear();
+        self.current_page = 0;
         self.output.clear();
     }
 
@@ -225,6 +226,7 @@ impl State {
         if reset_error_message {
             self.error_message = None;
         }
+        self.current_page = 0;
         self.command_parameters = None;
         self.input.clear();
         self.command_parameter_inputs.clear();
@@ -232,6 +234,7 @@ impl State {
 
     pub fn setup_for_command(&mut self, command_name: &CommandName) {
         self.command_parameter_inputs = command_name.parameters();
+        self.current_page = 0;
         self.command_parameters = Some(command_name.default_parameters());
         self.mode = Mode::CommandParameters;
     }

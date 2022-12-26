@@ -35,10 +35,21 @@ impl ArtistsCounts {
         // TODO: Add skipped song merging too
     }
 
-    pub fn total_count(&self) -> u64 {
+    pub fn total_count(&self, artist_name: &Option<String>) -> u64 {
+        let built_name = artist_name.as_ref().map(|n| ArtistName(n.clone()));
         self.artist_song_counters
-            .values()
-            .map(|song_counter| song_counter.total_song_plays())
+            .iter()
+            .filter_map(|(artist, song_counter)| {
+                if let Some(name) = &built_name {
+                    if artist.eq(name) {
+                        Some(song_counter.total_song_plays())
+                    } else {
+                        None
+                    }
+                } else {
+                    Some(song_counter.total_song_plays())
+                }
+            })
             .sum()
     }
 

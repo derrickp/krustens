@@ -29,7 +29,7 @@ impl EventStore for SqliteEventStore {
         {
             Ok(it) => it,
             Err(e) => {
-                println!("{e:?}");
+                log::error!("{e:?}");
                 None
             }
         };

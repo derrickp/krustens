@@ -128,6 +128,7 @@ impl CommandName {
             Self::Chart => CommandParameters::Chart {
                 year: None,
                 breakdown: BarBreakdown::default(),
+                artist_name: None,
             },
             Self::ClearOutput => CommandParameters::ClearOutput,
         }
@@ -221,6 +222,9 @@ impl CommandName {
             CommandName::Chart => vec![
                 CommandParameterSpec::Year {
                     description: "What year for the chart (e.g. 2022)".to_string()
+                },
+                CommandParameterSpec::ArtistName {
+                    description: "If you'd like to filter by artist, enter the name.".to_string()
                 },
                 CommandParameterSpec::BarBreakdown {
                     description: "How do you want to break down the data (weekday or month, defaults to month)".to_string()

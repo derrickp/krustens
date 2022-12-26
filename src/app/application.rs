@@ -214,7 +214,7 @@ impl Application {
         let text: String = self.state.input.drain();
         match CommandName::from_str(&text) {
             Ok(it) => {
-                info!("{it:?}");
+                info!("command name entered {it:?}");
                 self.state.setup_for_command(&it);
                 self.state.input.push_to_history(it);
             }
@@ -343,8 +343,12 @@ impl Application {
                 output_folder,
                 format,
             }) => self.run_export_to_file(&output_folder, format).await,
-            Some(CommandParameters::Chart { year, breakdown }) => {
-                self.run_chart(year, breakdown);
+            Some(CommandParameters::Chart {
+                year,
+                breakdown,
+                artist_name,
+            }) => {
+                self.run_chart(year, breakdown, artist_name);
             }
             Some(CommandParameters::TopAlbums { count, year }) => {
                 self.run_top_albums(count, year);
@@ -465,16 +469,21 @@ impl Application {
         }
     }
 
-    fn run_chart(&mut self, year: Option<i32>, breakdown: BarBreakdown) {
+    fn run_chart(
+        &mut self,
+        year: Option<i32>,
+        breakdown: BarBreakdown,
+        artist_name: Option<String>,
+    ) {
         match breakdown {
-            BarBreakdown::Month => self.monthly_bar_chart(year),
-            BarBreakdown::Weekday => self.weekday_bar_chart(year),
+            BarBreakdown::Month => self.monthly_bar_chart(year, artist_name),
+            BarBreakdown::Weekday => self.weekday_bar_chart(year, artist_name),
         }
 
         self.state.command_parameters = None;
     }
 
-    fn weekday_bar_chart(&mut self, year: Option<i32>) {
+    fn weekday_bar_chart(&mut self, year: Option<i32>, artist_name: Option<String>) {
         let all_year_counts = if let Some(y) = year {
             self.processor
                 .year_count(y)
@@ -501,8 +510,10 @@ impl Application {
                     for day_count in month_count.day_counts().iter() {
                         weekday_counts
                             .entry(day_count.weekday)
-                            .and_modify(|entry| *entry += day_count.artists_counts.total_count())
-                            .or_insert_with(|| day_count.artists_counts.total_count());
+                            .and_modify(|entry| {
+                                *entry += day_count.artists_counts.total_count(&artist_name)
+                            })
+                            .or_insert_with(|| day_count.artists_counts.total_count(&artist_name));
                     }
                 }
             }
@@ -519,7 +530,7 @@ impl Application {
         }
     }
 
-    fn monthly_bar_chart(&mut self, year: Option<i32>) {
+    fn monthly_bar_chart(&mut self, year: Option<i32>, artist_name: Option<String>) {
         let title = if let Some(y) = year {
             format!("Monthly Bar Chart (year: {y})")
         } else {
@@ -554,7 +565,7 @@ impl Application {
                 .map(|month_count| {
                     BarDataPoint::new(
                         format!("{:02}", month_count.month),
-                        month_count.artists_counts.total_count(),
+                        month_count.artists_counts.total_count(&artist_name),
                     )
                 })
                 .collect();
@@ -566,7 +577,6 @@ impl Application {
     }
 
     fn run_top_artists(&mut self, artist_count: usize, year: Option<i32>, month: Option<u32>) {
-        println!("{year:?}");
         match (year, month) {
             (None, None) => self.top_artists(artist_count),
             (None, Some(m)) => self.top_artists_for_month(artist_count, m),

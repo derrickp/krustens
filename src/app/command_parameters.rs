@@ -83,6 +83,7 @@ pub enum CommandParameters {
     },
     Chart {
         year: Option<i32>,
+        artist_name: Option<String>,
         breakdown: BarBreakdown,
     },
     ClearOutput,
@@ -155,9 +156,14 @@ impl CommandParameters {
                 year: Some(year),
             },
             Self::PrintStatistics { year: _ } => Self::PrintStatistics { year: Some(year) },
-            Self::Chart { year: _, breakdown } => Self::Chart {
+            Self::Chart {
+                year: _,
+                breakdown,
+                artist_name,
+            } => Self::Chart {
                 year: Some(year),
                 breakdown: breakdown.to_owned(),
+                artist_name: artist_name.to_owned(),
             },
             _ => self.to_owned(),
         }
@@ -165,8 +171,13 @@ impl CommandParameters {
 
     pub fn with_bar_breakdown_parameter(&self, breakdown: BarBreakdown) -> Self {
         match self {
-            Self::Chart { year, breakdown: _ } => Self::Chart {
+            Self::Chart {
+                year,
+                breakdown: _,
+                artist_name,
+            } => Self::Chart {
                 year: year.to_owned(),
+                artist_name: artist_name.to_owned(),
                 breakdown,
             },
             _ => self.to_owned(),
@@ -276,6 +287,15 @@ impl CommandParameters {
             } => self.to_owned(),
             Self::ArtistSongs { name: _ } => Self::ArtistSongs {
                 name: Some(name.to_string()),
+            },
+            Self::Chart {
+                year,
+                artist_name: _,
+                breakdown,
+            } => Self::Chart {
+                artist_name: Some(name.to_string()),
+                year: year.to_owned(),
+                breakdown: breakdown.to_owned(),
             },
             _ => self.to_owned(),
         }
