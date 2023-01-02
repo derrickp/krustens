@@ -77,7 +77,6 @@ fn parse_csv(path: &PathBuf) -> Result<Vec<TrackPlay>, ReadError> {
 
     let activities: Vec<TrackPlay> = reader
         .records()
-        .into_iter()
         .filter_map(|record| record.ok())
         .filter_map(|record| {
             if headers

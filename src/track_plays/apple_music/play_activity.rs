@@ -91,7 +91,6 @@ mod tests {
             csv::Reader::from_path("./fixtures/apple_music_play_activity.csv").unwrap();
         assert!(reader
             .deserialize::<PlayActivity>()
-            .into_iter()
             .map(|r| r.unwrap())
             .next()
             .is_some());
