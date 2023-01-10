@@ -108,14 +108,11 @@ impl State {
                 }
             }
             CommandParameterSpec::ArtistName { description: _ } => {
-                if text.is_empty() {
-                    Err(InteractiveError::RequiredParameterNotSet {
-                        name: "artist name".to_string(),
-                    })
-                } else {
+                if !text.is_empty() {
                     self.add_name_parameter(text);
-                    Ok(())
                 }
+
+                Ok(())
             }
             CommandParameterSpec::InputFolder { description: _ } => {
                 if !text.is_empty() {
