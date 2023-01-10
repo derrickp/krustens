@@ -1,6 +1,6 @@
 [package]
 name = "krustens"
-version = "4.4.0"
+version = "4.4.1"
 description = "A terminal application for getting information from your Spotify or Apple Music listen history."
 edition = "2021"
 license = "MIT"
