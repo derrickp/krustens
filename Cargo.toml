@@ -22,8 +22,8 @@ categories = ["command-line-utilities"]
 arboard = "3.2"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-crossterm = "0.25"
-csv = "1.1"
+crossterm = "0.26"
+csv = "1.2"
 fern = "0.6"
 log = "0.4"
 rand = "0.8"
@@ -34,7 +34,7 @@ sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite", "m
 strum = "0.24"
 strum_macros = "0.24"
 thiserror = "1.0"
-tokio = { version = "1.24", features = ["full"] }
+tokio = { version = "1.25", features = ["full"] }
 tui = "0.19"
-uuid = { version = "1.2", features = ["v4", "fast-rng"] }
+uuid = { version = "1.3", features = ["v4", "fast-rng"] }
 unicode-width = "0.1"
