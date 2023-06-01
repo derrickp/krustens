@@ -10,7 +10,7 @@ use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
+    text::{Line, Span, Text},
     widgets::{BarChart, Block, Borders, List, ListItem, Paragraph},
     Frame, Terminal,
 };
@@ -205,7 +205,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
         }
         _ => (Vec::new(), Style::default()),
     };
-    let mut text = Text::from(Spans::from(msg));
+    let mut text = Text::from(Line::from(msg));
     text.patch_style(style);
     let help_message = Paragraph::new(text);
     f.render_widget(help_message, chunks[0]);
@@ -267,7 +267,7 @@ fn render_message_set<B: Backend>(
 ) {
     let mut messages: Vec<ListItem> = Vec::new();
     if let Some(error_message) = error_message {
-        let content = vec![Spans::from(Span::styled(
+        let content = vec![Line::from(Span::styled(
             format!("Error: {error_message}"),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         ))];
@@ -282,7 +282,7 @@ fn render_message_set<B: Backend>(
         } else {
             m.to_string()
         };
-        let content = vec![Spans::from(Span::raw(message))];
+        let content = vec![Line::from(Span::raw(message))];
         messages.push(ListItem::new(content));
     }
 
@@ -310,7 +310,7 @@ fn render_empty<B: Backend>(
 ) {
     let mut messages: Vec<ListItem> = Vec::new();
     if let Some(error_message) = error_message {
-        let content = vec![Spans::from(Span::styled(
+        let content = vec![Line::from(Span::styled(
             format!("Error: {error_message}"),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         ))];
