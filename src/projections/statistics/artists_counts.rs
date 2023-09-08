@@ -28,7 +28,7 @@ impl ArtistsCounts {
         for (artist_name, counter) in other.artist_song_counters.iter() {
             self.artist_song_counters
                 .entry(artist_name.clone())
-                .or_insert(SongCounter::default())
+                .or_default()
                 .add(counter);
         }
 
@@ -70,7 +70,7 @@ impl ArtistsCounts {
         let artist_counts = self
             .skipped_artists
             .entry(artist_name.clone())
-            .or_insert_with(SongCounter::default);
+            .or_default();
         artist_counts.increment_song(song_name, 0);
     }
 
@@ -78,7 +78,7 @@ impl ArtistsCounts {
         let album_counter = self
             .artist_album_counters
             .entry(artist_name.clone())
-            .or_insert_with(AlbumCounter::default);
+            .or_default();
 
         album_counter.increment_album(album_name);
     }
@@ -93,7 +93,7 @@ impl ArtistsCounts {
         let song_counter = self
             .artist_song_counters
             .entry(artist_name.clone())
-            .or_insert_with(SongCounter::default);
+            .or_default();
 
         song_counter.increment_song(track_name, time_played);
     }
