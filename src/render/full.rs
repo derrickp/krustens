@@ -5,15 +5,14 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use tokio::sync::Mutex;
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout, Rect},
+use ratatui::{
+    prelude::{Backend, Constraint, CrosstermBackend, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{BarChart, Block, Borders, List, ListItem, Paragraph},
     Frame, Terminal,
 };
+use tokio::sync::Mutex;
 
 use crate::{
     app::{Application, MessageSet, Mode, Output},
