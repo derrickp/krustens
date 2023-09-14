@@ -67,10 +67,7 @@ impl ArtistsCounts {
     }
 
     pub fn add_song_skip(&mut self, artist_name: &ArtistName, song_name: &TrackName) {
-        let artist_counts = self
-            .skipped_artists
-            .entry(artist_name.clone())
-            .or_default();
+        let artist_counts = self.skipped_artists.entry(artist_name.clone()).or_default();
         artist_counts.increment_song(song_name, 0);
     }
 
