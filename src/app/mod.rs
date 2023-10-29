@@ -11,7 +11,7 @@ mod state;
 
 pub use application::Application;
 pub use chart::BarChart;
-pub use command_name::{CommandName, CommandNameIter};
+pub use command_name::CommandName;
 pub use command_parameters::{CommandParameterSpec, CommandParameters};
 pub use has_id::HasId;
 pub use input::Input;

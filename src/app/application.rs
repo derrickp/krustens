@@ -122,7 +122,7 @@ impl Application {
     pub fn current_parameter_description(&self) -> Option<String> {
         self.state
             .command_parameter_inputs
-            .get(0)
+            .first()
             .map(|spec| spec.description())
     }
 
@@ -145,14 +145,14 @@ impl Application {
             .filter(|name| name.to_string().starts_with(self.state.input.current()))
             .collect();
         if names.len() == 1 {
-            let name = names.get(0).unwrap();
+            let name = names.first().unwrap();
             self.state.input.set(name);
         }
     }
 
     pub fn autocomplete_command_parameter(&mut self) {
         if let Some(super::CommandParameterSpec::ArtistName { description: _ }) =
-            self.state.command_parameter_inputs.get(0)
+            self.state.command_parameter_inputs.first()
         {
             let matches: Vec<&ArtistName> = self
                 .processor
@@ -161,7 +161,7 @@ impl Application {
                 .filter(|artist_name| artist_name.starts_with(self.state.input.current()))
                 .collect();
             if matches.len() == 1 {
-                self.state.input.set_text(&matches.get(0).unwrap().0);
+                self.state.input.set_text(&matches.first().unwrap().0);
             }
         }
     }

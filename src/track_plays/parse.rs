@@ -135,7 +135,7 @@ mod tests {
         let plays = read_track_plays(&path).unwrap();
         println!("{:?}", &plays);
 
-        let play = match plays.get(0).unwrap() {
+        let play = match plays.first().unwrap() {
             TrackPlay::Spotify(it) => it,
             TrackPlay::AppleMusicPlayActivity(_) => todo!(),
         };

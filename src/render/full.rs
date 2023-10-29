@@ -156,7 +156,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Application) -
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
+fn ui(f: &mut Frame, app: &Application) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
@@ -255,8 +255,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Application) {
     }
 }
 
-fn render_message_set<B: Backend>(
-    f: &mut Frame<B>,
+fn render_message_set(
+    f: &mut Frame,
     chunk: Rect,
     message_set: &MessageSet,
     error_message: &Option<String>,
@@ -301,12 +301,7 @@ fn render_message_set<B: Backend>(
     f.render_widget(blocks, chunk);
 }
 
-fn render_empty<B: Backend>(
-    f: &mut Frame<B>,
-    chunk: Rect,
-    error_message: &Option<String>,
-    mode: &Mode,
-) {
+fn render_empty(f: &mut Frame, chunk: Rect, error_message: &Option<String>, mode: &Mode) {
     let mut messages: Vec<ListItem> = Vec::new();
     if let Some(error_message) = error_message {
         let content = vec![Line::from(Span::styled(
@@ -327,8 +322,8 @@ fn render_empty<B: Backend>(
     f.render_widget(blocks, chunk);
 }
 
-fn render_chart<B: Backend>(
-    f: &mut Frame<B>,
+fn render_chart(
+    f: &mut Frame,
     chunk: Rect,
     bar_chart_data: crate::app::BarChart,
     current_page: usize,
