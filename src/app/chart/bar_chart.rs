@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 
 use crate::app::HasId;
@@ -47,12 +49,14 @@ impl Default for BarBreakdown {
     }
 }
 
-impl ToString for BarBreakdown {
-    fn to_string(&self) -> String {
-        match *self {
-            BarBreakdown::Month => "month".to_string(),
-            BarBreakdown::Weekday => "weekday".to_string(),
-        }
+impl Display for BarBreakdown {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match *self {
+            BarBreakdown::Month => "month",
+            BarBreakdown::Weekday => "weekday",
+        };
+
+        f.write_str(value)
     }
 }
 

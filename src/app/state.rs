@@ -53,7 +53,7 @@ impl State {
 
     pub fn command_message_set(&self) -> MessageSet {
         let mut messages: Vec<String> = CommandName::iter()
-            .map(|command| format!("{} - {}", command.to_string(), command.description()))
+            .map(|command| format!("{} - {}", command, command.description()))
             .collect();
         messages.sort();
         MessageSet::with_messages("Commands", messages)

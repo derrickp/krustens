@@ -4,13 +4,7 @@ version = "4.5.1"
 description = "A terminal application for getting information from your Spotify or Apple Music listen history."
 edition = "2021"
 license = "MIT"
-exclude = [
-    ".github",
-    ".vscode/*",
-    ".fleet/*",
-    "build.sh",
-    "remove_db.sh"
-]
+exclude = [".github", ".vscode/*", ".fleet/*", "build.sh", "remove_db.sh"]
 readme = "README.md"
 homepage = "https://github.com/derrickp/krustens"
 keywords = ["music", "cli", "tui"]
@@ -30,11 +24,15 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-sqlx = { version = "0.7", features = [ "runtime-tokio-native-tls" , "sqlite", "migrate" ] }
-strum = "0.25"
-strum_macros = "0.25"
+sqlx = { version = "0.7", features = [
+    "runtime-tokio-native-tls",
+    "sqlite",
+    "migrate",
+] }
+strum = "0.26"
+strum_macros = "0.26"
 thiserror = "1.0"
-tokio = { version = "1.35", features = ["full"] }
-ratatui = { version = "0.25.0", features = ["all-widgets"]}
-uuid = { version = "1.6", features = ["v4", "fast-rng"] }
+tokio = { version = "1.36", features = ["full"] }
+ratatui = { version = "0.26", features = ["all-widgets"] }
+uuid = { version = "1.7", features = ["v4", "fast-rng"] }
 unicode-width = "0.1"

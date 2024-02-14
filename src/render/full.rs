@@ -204,8 +204,7 @@ fn ui(f: &mut Frame, app: &Application) {
         }
         _ => (Vec::new(), Style::default()),
     };
-    let mut text = Text::from(Line::from(msg));
-    text.patch_style(style);
+    let text = Text::from(Line::from(msg)).patch_style(style);
     let help_message = Paragraph::new(text);
     f.render_widget(help_message, chunks[0]);
 
