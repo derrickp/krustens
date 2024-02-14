@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 use strum_macros::EnumIter;
 
 use crate::persistence::Format;
@@ -22,22 +22,24 @@ pub enum CommandName {
     ClearOutput,
 }
 
-impl ToString for CommandName {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::RandomArtists => "random artists".to_string(),
-            Self::ArtistSongs => "artist songs".to_string(),
-            Self::ArtistsOnDay => "artists on day".to_string(),
-            Self::Summarize => "summarize".to_string(),
-            Self::ProcessListens => "process".to_string(),
-            Self::TopArtists => "top artists".to_string(),
-            Self::TopSongs => "top songs".to_string(),
-            Self::MostSkipped => "most skipped".to_string(),
-            Self::Export => "export".to_string(),
-            Self::Chart => "chart".to_string(),
-            Self::TopAlbums => "top albums".to_string(),
-            Self::ClearOutput => "clear output".to_string(),
-        }
+impl Display for CommandName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match *self {
+            Self::RandomArtists => "random artists",
+            Self::ArtistSongs => "artist songs",
+            Self::ArtistsOnDay => "artists on day",
+            Self::Summarize => "summarize",
+            Self::ProcessListens => "process",
+            Self::TopArtists => "top artists",
+            Self::TopSongs => "top songs",
+            Self::MostSkipped => "most skipped",
+            Self::Export => "export",
+            Self::Chart => "chart",
+            Self::TopAlbums => "top albums",
+            Self::ClearOutput => "clear output",
+        };
+
+        f.write_str(value)
     }
 }
 
