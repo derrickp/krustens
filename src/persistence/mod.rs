@@ -2,7 +2,6 @@ mod event_store;
 mod format;
 pub mod fs;
 mod output_folder;
-mod reader;
 pub mod sqlite;
 mod state_store;
 mod writer;
