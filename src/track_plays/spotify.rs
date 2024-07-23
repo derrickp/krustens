@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use std::u64;
 
 use crate::utils::{parse_end_time_rfc3339, parse_spotify_end_time};
 
