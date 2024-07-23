@@ -84,11 +84,7 @@ impl EventStore for SqliteEventStore {
             .await;
 
         match result {
-            Ok(events) => {
-                let version = events.len() as u32;
-
-                Ok(EventStream { events, version })
-            }
+            Ok(events) => Ok(EventStream { events }),
             Err(e) => Err(GetEventsError::UnableToReadStream {
                 message: e.to_string(),
                 event_source: "sqlite".to_string(),
@@ -119,13 +115,7 @@ impl EventStore for SqliteEventStore {
             .await;
 
         match result {
-            Ok(events) => {
-                let current_version = events.len() as u32;
-                Ok(EventStream {
-                    events,
-                    version: current_version,
-                })
-            }
+            Ok(events) => Ok(EventStream { events }),
             Err(e) => Err(GetEventsError::UnableToReadStream {
                 message: e.to_string(),
                 event_source: "sqlite".to_string(),
