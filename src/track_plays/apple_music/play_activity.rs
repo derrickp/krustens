@@ -11,16 +11,12 @@ pub struct PlayActivity {
     pub album_name: Option<String>,
     #[serde(alias = "Artist Name")]
     pub artist_name: String,
-    #[serde(alias = "End Reason Type")]
-    pub end_reason_type: String,
     #[serde(alias = "Event Type")]
     pub event_type: String,
     #[serde(alias = "Song Name")]
     pub song_name: String,
     #[serde(alias = "Event End Timestamp")]
     pub event_end_timestamp: String,
-    #[serde(alias = "Feature Name")]
-    pub feature_name: String,
     #[serde(alias = "Media Duration In Milliseconds")]
     pub media_duration_ms: Option<u64>,
     #[serde(alias = "Play Duration Milliseconds")]
@@ -101,11 +97,9 @@ mod tests {
         let play_activity = PlayActivity {
             album_name: None,
             artist_name: "Goatwhore".to_string(),
-            end_reason_type: "NATURAL_END_OF_TRACK".to_string(),
             event_type: "PLAY_END".to_string(),
             song_name: "Nihil".to_string(),
             event_end_timestamp: "2022-10-07T18:39:52.592Z".to_string(),
-            feature_name: "search / artist_detail / album_detail".to_string(),
             media_duration_ms: Some(192000),
             play_duration_ms: Some(192000),
         };
