@@ -6,6 +6,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
+    layout::Position,
     prelude::{Backend, Constraint, CrosstermBackend, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
@@ -168,7 +169,7 @@ fn ui(f: &mut Frame, app: &Application) {
             ]
             .as_ref(),
         )
-        .split(f.size());
+        .split(f.area());
 
     let (msg, style) = match app.mode() {
         Mode::Normal => (
@@ -183,7 +184,7 @@ fn ui(f: &mut Frame, app: &Application) {
                 Span::styled("< and >", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to go back and forward in output."),
             ],
-            Style::default().add_modifier(Modifier::RAPID_BLINK),
+            Style::default().add_modifier(Modifier::BOLD),
         ),
         Mode::EnterCommand => (
             vec![
@@ -219,12 +220,10 @@ fn ui(f: &mut Frame, app: &Application) {
     match app.mode() {
         Mode::EnterCommand | Mode::CommandParameters => {
             // Make the cursor visible and ask tui-rs to put it at the specified coordinates after rendering
-            f.set_cursor(
-                // Put cursor past the end of the input text
+            f.set_cursor_position(Position::new(
                 chunks[1].x + app.current_input().width() as u16 + 1,
-                // Move one line down, from the border to the input line
                 chunks[1].y + 1,
-            )
+            ))
         }
         _ =>
             // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
